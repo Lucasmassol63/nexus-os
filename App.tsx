@@ -16,7 +16,8 @@ export default function App() {
   const handleLogout = () => { setRole(null); setCurrentAthlete(undefined); };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-nexus-choco via-nexus-black to-black text-nexus-text selection:bg-nexus-red selection:text-white font-sans antialiased overflow-x-hidden">
+    <div className="min-h-screen text-cnm-white selection:bg-cnm-gold selection:text-cnm-navy font-sans antialiased overflow-x-hidden"
+         style={{ background: 'linear-gradient(160deg, #0D2155 0%, #0B1628 40%, #060E1C 100%)' }}>
       {!role && <LoginView onLogin={handleLogin} />}
       {role === 'COACH' && <CoachDashboard onLogout={handleLogout} />}
       {role === 'ATHLETE' && currentAthlete && <AthleteDashboard athlete={currentAthlete} onLogout={handleLogout} />}
