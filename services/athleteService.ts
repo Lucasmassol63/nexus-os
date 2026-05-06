@@ -4,7 +4,7 @@ import { Athlete, DailyLog, ObjectiveItem } from '../types';
 function rowToAthlete(row: any, extra?: { objectives?: any[], performance?: any[], dailyLogs?: any[], weightHistory?: any[] }): Athlete {
   return {
     id: row.id, firstName: row.first_name, lastName: row.last_name,
-    code: row.code, age: row.age, type: row.type as 'TEAM' | 'PRIVATE',
+    code: row.code, age: row.age, type: row.type as team_category: row.team_category,
     objectives: row.objectives ?? '',
     structuredObjectives: groupObjectives(extra?.objectives ?? []),
     gamification: {

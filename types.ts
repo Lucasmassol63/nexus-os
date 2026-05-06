@@ -132,7 +132,7 @@ export interface Athlete {
   lastName: string;
   code: string;
   age: number; 
-  type: 'TEAM' | 'PRIVATE';
+  type: 'TEAM' | 'PRIVATE'team_category?: 'U18' | 'N1' | 'BOTH';
   objectives: string; 
   structuredObjectives: StructuredObjectives; 
   
