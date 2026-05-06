@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { saveDailyLog, addObjective, updateObjectiveStatus, deleteObjective, updateSkin } from '../../services/athleteService';
-import { getAthleteSessions, completeSession, bookAppointment, getAppointments, getWeeklySchedule, getNextMatch } from '../../services/scheduleService';
+import { getAthleteSessions, completeSession, bookAppointment, getAppointments, getWeeklySchedule, getNextMatch, getAthleteWeeklySchedule } from '../../services/scheduleService';
 import { Athlete, WorkoutSession, Exercise, DailyLog, Match, AttendanceStatus, Appointment, DaySchedule, EventType } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -132,7 +132,7 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
       const offset = currentWeekStart.getTimezoneOffset();
       const adjustedDate = new Date(currentWeekStart.getTime() - (offset*60*1000));
       const dateStr = adjustedDate.toISOString().split('T')[0];
-      const schedule = await getWeeklySchedule(dateStr);
+      const schedule = await getAthleteWeeklySchedule(dateStr, athlete.id);
       setWeekSchedule(schedule);
     };
     loadSchedule();

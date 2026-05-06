@@ -226,3 +226,64 @@ export async function sendMessage(athleteId: string, subject: string, body: stri
   const { error } = await supabase.from('messages').insert({ athlete_id: athleteId, subject, body });
   if (error) throw error;
 }
+/** Planning filtré pour un athlète spécifique */
+export async function getAthleteWeeklySchedule(startDateStr: string, athleteId: string): Promise<DaySchedule[]> {
+  const end = new Date(startDateStr);
+  end.setDate(end.getDate() + 6);
+
+  // Récupère tous les événements visibles
+  const { data: events, error } = await supabase
+    .from('schedule_events')
+    .select('*')
+    .gte('date', startDateStr)
+    .lte('date', end.toISOString().split('T')[0])
+    .eq('is_visible_to_athletes', true)
+    .order('start_time');
+
+  if (error) throw error;
+
+  // Récupère les assignations pour ces événements
+  const eventIds = (events ?? []).map((e: any) => e.id);
+  let assignedEventIds = new Set<string>();
+
+  if (eventIds.length > 0) {
+    const { data: ea } = await supabase
+      .from('event_athletes')
+      .select('event_id')
+      .eq('athlete_id', athleteId)
+      .in('event_id', eventIds);
+    (ea ?? []).forEach((r: any) => assignedEventIds.add(r.event_id));
+  }
+
+  // Filtre : visible si aucun athlète assigné (tout le monde) OU si cet athlète est assigné
+  const { data: allAssignments } = await supabase
+    .from('event_athletes')
+    .select('event_id')
+    .in('event_id', eventIds.length > 0 ? eventIds : ['none']);
+
+  const eventsWithAssignments = new Set((allAssignments ?? []).map((r: any) => r.event_id));
+
+  const filteredEvents = (events ?? []).filter((e: any) => {
+    // Si l'événement n'a aucune assignation → tout le monde le voit
+    if (!eventsWithAssignments.has(e.id)) return true;
+    // Sinon → seulement si cet athlète est assigné
+    return assignedEventIds.has(e.id);
+  });
+
+  const weekDays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
+  const start = new Date(startDateStr);
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    return {
+      dayName: weekDays[i], date: dateStr,
+      events: filteredEvents.filter((e: any) => e.date === dateStr).map((e: any) => ({
+        id: e.id, type: e.type, startTime: e.start_time, endTime: e.end_time,
+        title: e.title, description: e.description ?? '', intensity: e.intensity ?? 5,
+        isVisibleToAthletes: true,
+      })),
+    };
+  });
+}
