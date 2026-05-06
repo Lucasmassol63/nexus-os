@@ -356,46 +356,42 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
           )}
 
           {/* APERÇU SEMAINE */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-xs text-nexus-gray font-bold uppercase tracking-widest pl-1">Aperçu Semaine</h3>
-              <WeekNavigator />
-            </div>
-            <div className="overflow-x-auto pb-4 scrollbar-hide -mx-2 px-2">
-              <div className="grid min-w-[500px]" style={{ gridTemplateColumns: `80px repeat(7, 1fr)`, gridTemplateRows: 'auto' }}>
-                <div className="text-[8px] text-nexus-gray p-1"></div>
-                {weeklySchedule.map((day, dIdx) => (
-                  <div key={dIdx} className="text-center p-1">
-                    <div className="text-[8px] font-bold text-nexus-gray uppercase">{day.dayName.substring(0,3)}</div>
-                    <div className="text-[10px] text-white font-bold">{day.date.split('-')[2]}</div>
-                  </div>
-                ))}
-                {[...Array(14)].map((_, rowIdx) => (
-                  <React.Fragment key={rowIdx}>
-                    <div className="text-[7px] text-nexus-gray/50 p-0.5">{rowIdx < 7 ? 'AM' : 'PM'}</div>
-                    {weeklySchedule.map((day, dIdx) => {
-                      const half = rowIdx < 7 ? 'AM' : 'PM';
-                      const relevantEvents = day.events.filter(ev => {
-                        const h = parseInt(ev.startTime.split(':')[0]);
-                        return half === 'AM' ? h < 14 : h >= 14;
-                      }).slice(0, 1);
-                      return (
-                        <div key={dIdx} className="border border-white/5 bg-transparent min-h-[60px] p-1 flex flex-col gap-1">
-                          {relevantEvents.map((ev, eIdx) => (
-                            <div key={eIdx} className={`rounded p-1 text-[8px] leading-tight ${getEventTypeColor(ev.type)} text-white relative`}>
-                              {!ev.isVisibleToAthletes && <span className="absolute top-0 right-0 text-[6px] bg-red-500 rounded-full w-1.5 h-1.5"></span>}
-                              <div className="font-bold">{ev.startTime}</div>
-                              <div className="truncate">{ev.type}</div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
+<div>
+  <div className="flex justify-between items-center mb-3">
+    <h3 className="text-xs text-nexus-gray font-bold uppercase tracking-widest pl-1">Aperçu Semaine</h3>
+    <WeekNavigator />
+  </div>
+  <div className="overflow-x-auto pb-2 scrollbar-hide">
+    <div className="flex gap-2 min-w-[500px]">
+      {weeklySchedule.map((day, dIdx) => (
+        <div key={dIdx} className="flex-1 min-w-[70px]">
+          <div className="text-center mb-1">
+            <div className="text-[9px] font-bold text-nexus-gray uppercase">{day.dayName.substring(0,3)}</div>
+            <div className="text-xs text-white font-bold">{day.date.split('-')[2]}</div>
           </div>
+          <div className="space-y-1 min-h-[80px]">
+            {day.events.length === 0 && (
+              <div className="h-full border border-white/5 rounded-lg"></div>
+            )}
+            {day.events.map((ev, eIdx) => (
+              <div
+                key={eIdx}
+                onClick={() => { setPlanningDayIndex(dIdx); setActiveTab('PLANNING'); }}
+                className={`rounded-lg p-1.5 text-[8px] leading-tight cursor-pointer hover:brightness-125 transition-all ${getEventTypeColor(ev.type)} text-white`}
+              >
+                <div className="font-bold">{ev.startTime}</div>
+                <div className="truncate font-medium">{ev.title || ev.type}</div>
+                <div className={`text-[7px] mt-0.5 font-bold ${(ev.intensity||0)>=8?'text-red-300':(ev.intensity||0)>=5?'text-yellow-200':'text-green-200'}`}>
+                  RPE {ev.intensity}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
 
           {/* STATS */}
           <div className="grid grid-cols-2 gap-4 pb-8">
