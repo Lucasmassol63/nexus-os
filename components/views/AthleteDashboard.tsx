@@ -88,9 +88,8 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
 
   useEffect(() => {
     const loadSchedule = async () => {
-      const offset = currentWeekStart.getTimezoneOffset();
-      const adjusted = new Date(currentWeekStart.getTime() - offset * 60 * 1000);
-      const dateStr = adjusted.toISOString().split('T')[0];
+      const _d = currentWeekStart;
+      const dateStr = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
       const schedule = await db.getWeeklySchedule(dateStr);
       setWeekSchedule(schedule);
     };
@@ -151,7 +150,7 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
       <button onClick={handlePrevWeek} className="p-2 text-nexus-gray hover:text-white">←</button>
       <div className="flex flex-col items-center px-2">
         <span className="text-[8px] text-nexus-gray uppercase font-bold tracking-wider">Semaine du</span>
-        <span className="text-xs font-bold text-white">{formatDateShort(currentWeekStart.toISOString())}</span>
+        <span className="text-xs font-bold text-white">{`${String(currentWeekStart.getDate()).padStart(2,'0')}/${String(currentWeekStart.getMonth()+1).padStart(2,'0')}`}</span>
       </div>
       <button onClick={handleNextWeek} className="p-2 text-nexus-gray hover:text-white">→</button>
     </div>
