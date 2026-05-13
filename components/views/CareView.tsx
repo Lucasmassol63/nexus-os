@@ -500,7 +500,7 @@ export const CareView: React.FC<CareViewProps> = ({ athlete }) => {
       if (zone.bilateral) {
         return [
           <BodyDot key={`${zone.id}-L`} zone={zone} side="L" onClick={setSelectedZone} active={selectedZone === zone.id} />,
-          <BodyDot key={`${zone.id}-R`} zone={{ ...zone, x: 100 - zone.x }} side="R" onClick={setSelectedZone} active={selectedZone === zone.id} />,
+          <BodyDot key={`${zone.id}-R`} zone={zone} side="R" onClick={setSelectedZone} active={selectedZone === zone.id} />,
         ];
       }
       return [<BodyDot key={zone.id} zone={zone} onClick={setSelectedZone} active={selectedZone === zone.id} />];

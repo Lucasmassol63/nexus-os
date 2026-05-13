@@ -11,6 +11,7 @@ import { Athlete, Exercise, Match, DaySchedule, AttendanceStatus, ScheduleEvent,
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
 import { DataView } from './DataView';
+import { PlanningView } from './PlanningView';
 import { AthleteProfileCoach } from './AthleteProfileCoach';
 
 interface CoachDashboardProps { onLogout: () => void; }
