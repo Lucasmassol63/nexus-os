@@ -1,738 +1,608 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Athlete, Exercise } from '../../types';
+import { GlassCard } from '../ui/GlassCard';
+import { Button } from '../ui/Button';
+import { Exercise, Athlete } from '../../types';
 
-interface CareViewProps { athlete: Athlete; }
-
-// ─── TYPES ───────────────────────────────────────────────────
-interface EnhancedExercise {
-  id: string;
-  name: string;
-  sets: number;
-  reps: string;
-  rest: number; // secondes
-  tempo?: string;
-  load?: string;
-  category: 'MOBILITY' | 'STRETCHING' | 'ACTIVATION';
-  instructions: string;
-  tips: string[];
-  muscles: string[];
-  videoNote?: string;
-  isTimed?: boolean; // si true, reps = durée en secondes
+interface CareViewProps {
+  athlete: Athlete;
 }
 
-// ─── BASE DONNÉES EXERCICES ───────────────────────────────────
-const ROUTINES: Record<string, { mobility: EnhancedExercise[], stretching: EnhancedExercise[] }> = {
+// ─── EXERCISES DATABASE ──────────────────────────────────────────────────────
+
+const PRE_MATCH_ROUTINE: Exercise[] = [
+  { id: 'pm1', name: 'Réveil Fessier (Clamshells)', sets: 2, reps: '15/côté', tempo: 'Dynamique', rest: '0s', targetLoad: 'Élastique', instructions: 'Activation rapide des fessiers.' },
+  { id: 'pm2', name: "World's Greatest Stretch", sets: 2, reps: '6/côté', tempo: 'Fluide', rest: '0s', targetLoad: 'PDC', instructions: 'Grande fente avec rotation thoracique.' },
+  { id: 'pm3', name: 'Sauts Pogo', sets: 2, reps: '20', tempo: 'Explosif', rest: '30s', targetLoad: 'PDC', instructions: 'Rebonds chevilles jambes tendues.' },
+  { id: 'pm4', name: 'Shadow Boxing / Mouvements', sets: 1, reps: '45s', tempo: 'Rapide', rest: '0s', targetLoad: 'PDC', instructions: 'Monter le cardio progressivement.' },
+];
+
+const BASE_WARMUP: Exercise[] = [
+  { id: 'w1', name: 'Rotations Articulaires (Cou, Épaules, Hanches)', sets: 1, reps: '1 min', tempo: 'Lent', rest: '0s', targetLoad: 'PDC', instructions: 'Réveil articulaire global.' },
+  { id: 'w2', name: 'Squat Profond (Tenue)', sets: 1, reps: '45s', tempo: 'Statique', rest: '0s', targetLoad: 'PDC', instructions: 'Ouvrir les hanches en bas du squat.' },
+];
+
+// ─── ROUTINES (Articulations + Muscles) ─────────────────────────────────────
+const ROUTINES: Record<string, { mobility: Exercise[]; stretching: Exercise[] }> = {
+  // ── ARTICULATIONS ──
   Cou: {
     mobility: [
-      {
-        id: 'cou-m1', category: 'MOBILITY',
-        name: 'CARs Cervicaux', sets: 2, reps: '5/côté', rest: 15,
-        instructions: 'Effectue des rotations articulaires maximales lentes de la tête. Commence par amener l\'oreille vers l\'épaule, puis l\'oeil vers le ciel, puis l\'oreille à l\'autre épaule, puis le menton vers la poitrine.',
-        tips: ['Mouvement lent et contrôlé', 'Ne force pas en fin d\'amplitude', 'Respiration régulière'],
-        muscles: ['Sterno-cléido-mastoïdien', 'Trapèze supérieur', 'Semi-épineux'],
-      },
-      {
-        id: 'cou-m2', category: 'MOBILITY',
-        name: 'Rétraction du Menton', sets: 3, reps: '12', rest: 10,
-        instructions: 'Assis droit, amène le menton vers l\'arrière en créant un "double menton". Maintiens 2 secondes. Active les fléchisseurs profonds du cou. Évite de pencher la tête vers le bas.',
-        tips: ['Regard horizontal', 'Tenir 2s en position haute', 'Sensation de grandissement'],
-        muscles: ['Longus colli', 'Longus capitis', 'Fléchisseurs profonds'],
-      },
-      {
-        id: 'cou-m3', category: 'ACTIVATION',
-        name: 'Renfo Isométrique Cou', sets: 3, reps: '8s/direction', rest: 20, isTimed: false,
-        instructions: 'Place ta main sur le côté de la tête. Pousse la tête contre la main sans bouger (isométrique). Maintiens 8 secondes. Fait les 4 directions : droite, gauche, avant, arrière.',
-        tips: ['Force = 60-70% du max', 'Aucun mouvement de tête', 'Expire pendant l\'effort'],
-        muscles: ['Scalènes', 'Sterno-mastoïdien', 'Splénius'],
-      },
+      { id: 'm1', name: 'Rétraction Menton', sets: 3, reps: '10', tempo: '2020', rest: '0s', targetLoad: 'PDC', instructions: 'Rentrer le menton pour créer un double menton (fléchisseurs profonds).' },
+      { id: 'm2', name: 'Rotations Cou (CARs)', sets: 3, reps: '5/côté', tempo: 'Très lent', rest: '0s', targetLoad: 'PDC', instructions: 'Rotations contrôlées dans toute l\'amplitude, très lentement.' },
     ],
     stretching: [
-      {
-        id: 'cou-s1', category: 'STRETCHING',
-        name: 'Étirement Trapèze Supérieur', sets: 2, reps: '45s/côté', rest: 15, isTimed: true,
-        instructions: 'Assis, incline la tête vers l\'épaule droite. Place la main droite sur la tête (sans tirer). Laisse le poids de la main faire l\'étirement. Épaule gauche maintenue basse. Change de côté.',
-        tips: ['Ne tire pas avec la main', 'Poids de la main seulement', 'Garde l\'épaule basse'],
-        muscles: ['Trapèze supérieur', 'Scalènes', 'Sterno-mastoïdien'],
-      },
-      {
-        id: 'cou-s2', category: 'STRETCHING',
-        name: 'Étirement Sub-occipital', sets: 2, reps: '60s', rest: 15, isTimed: true,
-        instructions: 'Couché sur le dos, place une balle de tennis sous la base du crâne (là où le cou rejoint la tête). Laisse le poids de la tête comprimer doucement la zone. Respire profondément.',
-        tips: ['Poids de la tête uniquement', 'Respiration abdominale', 'Jamais de douleur vive'],
-        muscles: ['Sub-occipitaux', 'Muscles de la nuque profonds'],
-      },
+      { id: 's1', name: 'Étirement Trapèzes', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Incliner la tête sur le côté, épaule opposée basse.' },
+      { id: 's2', name: 'Élévateur Scapula', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: "Regarder vers l'aisselle et tirer doucement la tête." },
     ],
   },
-
-  Epaule: {
+  Épaule: {
     mobility: [
-      {
-        id: 'ep-m1', category: 'MOBILITY',
-        name: 'CARs d\'Épaule', sets: 2, reps: '5/côté', rest: 15,
-        instructions: 'Debout, bras tendu sur le côté. Décris le plus grand cercle possible avec le bras en gardant le coude tendu. Monte devant, passe par le haut, va en arrière, reviens par le bas. Inverted : l\'autre sens.',
-        tips: ['Bras rigoureusement tendu', 'Cercle le plus grand possible', 'Gaine abdominale active'],
-        muscles: ['Deltoïde', 'Coiffe des rotateurs', 'Grand dentelé'],
-      },
-      {
-        id: 'ep-m2', category: 'MOBILITY',
-        name: 'Dislocations au Bâton', sets: 3, reps: '10', rest: 20,
-        instructions: 'Tiens un bâton ou une serviette roulée devant toi, prise large. Passe le bâton d\'avant en arrière en gardant les coudes tendus. Réduis l\'écartement des mains progressivement. Évite de monter les épaules.',
-        tips: ['Prise aussi large que nécessaire', 'Coudes tendus tout le long', 'Réduire la prise sur plusieurs semaines'],
-        muscles: ['Capsule antérieure', 'Rhomboïdes', 'Grand rond'],
-      },
-      {
-        id: 'ep-m3', category: 'ACTIVATION',
-        name: 'Y-T-W-L (Élastique ou Sol)', sets: 3, reps: '10/lettre', rest: 30,
-        instructions: 'Face contre sol ou debout avec élastique. Forme les lettres Y (bras en V vers le haut), T (bras horizontaux), W (coudes à 90° élevés), L (coudes à 90° de face). Contrôle le retour.',
-        tips: ['Omoplates vers la colonne en tout point', 'Mouvement lent et contrôlé', 'Sensation de brûlure dans le haut du dos = normal'],
-        muscles: ['Sus-épineux', 'Infra-épineux', 'Rhomboïdes', 'Grand dentelé'],
-      },
+      { id: 'm1', name: 'Dislocations Bâton', sets: 3, reps: '10', tempo: 'Lent', rest: '0s', targetLoad: 'Bâton', instructions: "Passer le bâton d'avant en arrière bras tendus." },
+      { id: 'm2', name: 'Pompes Scapulaires', sets: 3, reps: '12', tempo: '2020', rest: '0s', targetLoad: 'PDC', instructions: 'Serrer et écarter les omoplates bras tendus.' },
+      { id: 'm3', name: 'Glissements Muraux (Wall Slides)', sets: 3, reps: '10', tempo: '2020', rest: '0s', targetLoad: 'PDC', instructions: 'Dos au mur, glisser les bras vers le haut en gardant le contact.' },
     ],
     stretching: [
-      {
-        id: 'ep-s1', category: 'STRETCHING',
-        name: 'Étirement Capsule Postérieure', sets: 2, reps: '60s/côté', rest: 20, isTimed: true,
-        instructions: 'Debout, croise le bras gauche devant la poitrine au niveau de l\'épaule. Avec le bras droit, amène le coude gauche vers l\'épaule droite. Tête tournée à gauche. Tu dois sentir l\'arrière de l\'épaule.',
-        tips: ['Ne tourne pas le tronc', 'Maintien doux et régulier', 'Respire dans l\'étirement'],
-        muscles: ['Capsule postérieure', 'Infra-épineux', 'Petit rond'],
-      },
-      {
-        id: 'ep-s2', category: 'STRETCHING',
-        name: 'Ouverture Pectorale au Mur', sets: 2, reps: '45s/côté', rest: 20, isTimed: true,
-        instructions: 'Place l\'avant-bras à 90° sur un montant de porte ou un mur. Coude à hauteur d\'épaule. Tourne le buste vers l\'opposé jusqu\'à sentir l\'étirement du pectoral. Varie la hauteur du bras pour toucher différentes fibres.',
-        tips: ['Coude à hauteur d\'épaule', 'Rotation du buste, pas de la tête', '3 positions de hauteur différentes'],
-        muscles: ['Grand pectoral', 'Petit pectoral', 'Deltoïde antérieur'],
-      },
+      { id: 's1', name: 'Étirement Pectoraux au Mur', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Main contre un mur, tourner le buste du côté opposé.' },
+      { id: 's2', name: 'Capsule Postérieure (Sleeper Stretch)', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Allongé côté, bras tendu devant, pousser le poignet vers le sol.' },
     ],
   },
-
-  Dos: {
+  Coude: {
     mobility: [
-      {
-        id: 'dos-m1', category: 'MOBILITY',
-        name: 'Chat / Vache Contrôlé', sets: 3, reps: '10', rest: 10,
-        instructions: 'À 4 pattes, mains sous les épaules, genoux sous les hanches. Expire en arrondissant le dos (chat), pousse le sol avec les mains. Inspire en creusant le dos (vache), regard vers l\'avant. Vertèbre par vertèbre.',
-        tips: ['Vertèbre par vertèbre, du bas vers le haut', 'Expire sur l\'arrondi, inspire sur le creux', 'Amplitude maximale à chaque répétition'],
-        muscles: ['Érecteurs du rachis', 'Multifides', 'Grand dorsal'],
-      },
-      {
-        id: 'dos-m2', category: 'MOBILITY',
-        name: 'Livre Ouvert Thoracique', sets: 3, reps: '8/côté', rest: 15,
-        instructions: 'Allongé sur le côté, genoux fléchis à 90°, bras tendus devant toi. Ouvre le bras supérieur vers le plafond et l\'arrière aussi loin que possible, regarde ta main. Reviens. Objectif : poser l\'épaule au sol côté opposé.',
-        tips: ['Genoux collés (ne pas les laisser basculer)', 'Regarde ta main tout le long', 'Expire en ouvrant'],
-        muscles: ['Rotateurs thoraciques', 'Rhomboïdes', 'Dentelé'],
-      },
-      {
-        id: 'dos-m3', category: 'ACTIVATION',
-        name: 'Superman / Hollow Body', sets: 3, reps: '12s/position', rest: 20,
-        instructions: 'Couché ventre, lève simultanément les bras, la poitrine et les jambes du sol. Maintiens 3s. Ensuite, retourne-toi et adopte la position Hollow (dos plat, bras et jambes en l\'air, bas du dos collé au sol). Alterne.',
-        tips: ['Sur le ventre : serrer les fessiers', 'Hollow : bas du dos COLLÉ au sol', 'Respiration diaphragmatique'],
-        muscles: ['Érecteurs', 'Grand fessier', 'Abdominaux profonds'],
-      },
+      { id: 'm1', name: 'Distraction Élastique', sets: 2, reps: '60s', tempo: 'Statique', rest: '0s', targetLoad: 'Élastique', instructions: 'Élastique attaché haut, bras tendu, laisser tirer.' },
+      { id: 'm2', name: 'Pro/Supination', sets: 3, reps: '15', tempo: '2020', rest: '0s', targetLoad: 'Léger', instructions: 'Rotation du poignet avec marteau ou petit poids.' },
     ],
     stretching: [
-      {
-        id: 'dos-s1', category: 'STRETCHING',
-        name: 'Posture de l\'Enfant Étendue', sets: 2, reps: '60s', rest: 15, isTimed: true,
-        instructions: 'À genoux, assis sur les talons (ou aussi loin que tu peux). Glisse les bras loin devant toi, front au sol. Pour cibler les côtés, glisse les bras vers la droite ou la gauche alternativement.',
-        tips: ['Fesses vers les talons', 'Expulsion totale de l\'air', 'Relâchement progressif à chaque expiration'],
-        muscles: ['Grand dorsal', 'Carré des lombes', 'Grand rond'],
-      },
-      {
-        id: 'dos-s2', category: 'STRETCHING',
-        name: 'Figure 4 / Piriforme', sets: 2, reps: '60s/côté', rest: 15, isTimed: true,
-        instructions: 'Couché sur le dos, croise la cheville droite sur le genou gauche (figure 4). Attrape le dos de la cuisse gauche et tire doucement vers toi. Sens l\'étirement dans la fesse droite. Échange.',
-        tips: ['Pied en flexion (flex)', 'Dos plat sur le sol', 'Plus tu rapproches la jambe, plus c\'est intense'],
-        muscles: ['Grand fessier', 'Piriforme', 'Rotateurs externes de hanche'],
-      },
+      { id: 's1', name: 'Étirement Fléchisseurs Poignet', sets: 2, reps: '45s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Bras tendu, paume vers l\'avant, tirer les doigts.' },
+      { id: 's2', name: 'Étirement Extenseurs Poignet', sets: 2, reps: '45s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Bras tendu, dos de la main vers l\'avant.' },
     ],
   },
-
-  Hanche: {
+  Poignet: {
     mobility: [
-      {
-        id: 'hip-m1', category: 'MOBILITY',
-        name: '90/90 Switch Hip', sets: 3, reps: '8/côté', rest: 20,
-        instructions: 'Assis au sol, une jambe devant (genou à 90°) et une derrière (genou à 90°). Lève les deux genoux du sol et bascule vers l\'autre côté sans utiliser les mains. Maintiens 2s en haut de chaque côté.',
-        tips: ['Sans aide des mains', 'Dos droit pendant le switch', 'Amplitude complète des 2 côtés'],
-        muscles: ['Rotateurs internes/externes hanche', 'Psoas', 'Carré des lombes'],
-      },
-      {
-        id: 'hip-m2', category: 'MOBILITY',
-        name: 'World\'s Greatest Stretch', sets: 2, reps: '5/côté', rest: 15,
-        instructions: 'Depuis la position debout, fais un grand pas en avant (fente). Pose la main du même côté que le pied avant au sol à l\'intérieur du pied. Ouvre le coude vers le sol (rotation de la hanche). Puis lève le bras vers le plafond (rotation thoracique). Reviens et change de côté.',
-        tips: ['Pied arrière poussé dans le sol', 'Hanche arrière abaissée vers le sol', 'Regard sur la main qui monte'],
-        muscles: ['Psoas', 'Fléchisseurs hanche', 'Rotateurs thoraciques', 'Grand fessier'],
-      },
-      {
-        id: 'hip-m3', category: 'MOBILITY',
-        name: 'Deep Squat Hold', sets: 3, reps: '45s', rest: 20, isTimed: true,
-        instructions: 'Descends en squat profond, talons au sol. Talons dans l\'alignement des épaules. Pousse les genoux vers l\'extérieur avec les coudes. Garde le dos droit. Maintiens la position en respirant profondément.',
-        tips: ['Talons au sol impérativement', 'Coudes poussent les genoux', 'Monte les bras si besoin pour le contrepoids'],
-        muscles: ['Hanche', 'Cheville', 'Colonne lombaire', 'Adducteurs'],
-      },
+      { id: 'm1', name: 'Rotations Poignet (CARs)', sets: 3, reps: '5/côté', tempo: 'Très lent', rest: '0s', targetLoad: 'PDC', instructions: 'Rotations articulaires contrôlées maximales.' },
+      { id: 'm2', name: 'Pompes sur Poings', sets: 2, reps: '10', tempo: '2020', rest: '0s', targetLoad: 'PDC', instructions: 'Sur les poings pour renforcer l\'alignement du poignet.' },
     ],
     stretching: [
-      {
-        id: 'hip-s1', category: 'STRETCHING',
-        name: 'Étirement Psoas au Sol', sets: 2, reps: '60s/côté', rest: 20, isTimed: true,
-        instructions: 'Genou droit au sol (sur une serviette), pied gauche devant (fente basse). Avance les hanches vers l\'avant et le bas sans incliner le buste. Tu dois sentir l\'avant de la cuisse droite et l\'aine. Pour intensifier, lève le bras droit.',
-        tips: ['Hanche avant, pas buste en avant', 'Contracte légèrement le fessier arrière', 'Jamais de lordose exagérée'],
-        muscles: ['Psoas-iliaque', 'Droit fémoral', 'Sartorius'],
-      },
-      {
-        id: 'hip-s2', category: 'STRETCHING',
-        name: 'Pigeon Yoga', sets: 2, reps: '90s/côté', rest: 20, isTimed: true,
-        instructions: 'Depuis la planche, amène le genou gauche derrière la main gauche, tibia horizontal. Extends la jambe droite derrière toi. Descends progressivement vers le sol. Pour plus d\'intensité, pose les avant-bras au sol.',
-        tips: ['Pied avant en flexion (protège le genou)', 'Hanche avant vers le bas', 'Respiration profonde pour relâcher'],
-        muscles: ['Grand fessier', 'Piriforme', 'TFL', 'Rotateurs externes'],
-      },
+      { id: 's1', name: 'Étirement Prière', sets: 2, reps: '60s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Mains jointes devant le cœur, descendre les mains.' },
+      { id: 's2', name: 'Prière Inversée', sets: 2, reps: '60s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Dos des mains l\'un contre l\'autre, monter les coudes.' },
     ],
   },
-
-  Genou: {
-    mobility: [
-      {
-        id: 'gn-m1', category: 'MOBILITY',
-        name: 'Genou au Mur (Dorsiflexion)', sets: 3, reps: '12/côté', rest: 10,
-        instructions: 'À genoux face au mur, pied avant à environ 10 cm du mur. Avance le genou vers le mur sans décoller le talon. L\'objectif est de toucher le mur avec le genou. Augmente progressivement la distance du pied au mur.',
-        tips: ['Talon impérativement au sol', 'Pointe du pied dans l\'axe du tibia', 'Mesure ta distance chaque séance pour progresser'],
-        muscles: ['Mollet (Gastrocnémien/Soléaire)', 'Cheville', 'Vaste interne'],
-      },
-      {
-        id: 'gn-m2', category: 'ACTIVATION',
-        name: 'Terminal Knee Extension (TKE)', sets: 3, reps: '15', rest: 20,
-        instructions: 'Élastique autour de la jambe derrière le genou, fixé à un point devant toi. Fléchis légèrement le genou puis tends-le complètement. Contracte le quadriceps au maximum en fin d\'extension. Pied au sol tout le temps.',
-        tips: ['Extension COMPLÈTE du genou', 'Pied plat au sol', 'Contraction quadriceps maximale'],
-        muscles: ['Vaste interne (VMO)', 'Quadriceps', 'Ligament croisé antérieur'],
-      },
-      {
-        id: 'gn-m3', category: 'ACTIVATION',
-        name: 'Nordic Hamstring (Excentrique)', sets: 3, reps: '6', rest: 90,
-        instructions: 'À genoux sur une surface rembourrée, fixe les chevilles (sous une barre, canapé, etc.). Descends le buste vers le sol le plus lentement possible en contrôlant avec les ischio-jambiers. Pousse sur les mains pour revenir si nécessaire.',
-        tips: ['Descente la plus LENTE possible (5 à 10s)', 'Corps droit comme une planche', 'Stop si douleur derrière le genou'],
-        muscles: ['Ischio-jambiers', 'Biceps fémoral', 'Tendon du jarret'],
-      },
-    ],
-    stretching: [
-      {
-        id: 'gn-s1', category: 'STRETCHING',
-        name: 'Quadriceps Couché', sets: 2, reps: '60s/côté', rest: 20, isTimed: true,
-        instructions: 'Allongé sur le côté, attrape ta cheville par derrière. Ramène le talon vers la fesse. Pousse doucement la hanche vers l\'avant pour intensifier. Tu dois sentir l\'avant de la cuisse.',
-        tips: ['Hanches alignées (ne pas ouvrir)', 'Genou vers le bas (pas vers le haut)', 'Pas de douleur dans le genou'],
-        muscles: ['Droit fémoral', 'Vaste latéral', 'Sartorius'],
-      },
-      {
-        id: 'gn-s2', category: 'STRETCHING',
-        name: 'Ischio-Jambiers (RDL Étirement)', sets: 2, reps: '45s/côté', rest: 15, isTimed: true,
-        instructions: 'Debout, pose le talon sur une surface à hauteur de hanche (banc, barrière). Garde la jambe tendue. Incline le buste vers l\'avant, dos plat. Ne voûte pas le dos. Tu sens l\'arrière de la cuisse.',
-        tips: ['DOS PLAT (crucial)', 'Pied en flexion (pointe vers toi)', 'Inclinaison des hanches, pas du dos'],
-        muscles: ['Biceps fémoral', 'Semi-tendineux', 'Semi-membraneux'],
-      },
-    ],
-  },
-
-  Cheville: {
-    mobility: [
-      {
-        id: 'ch-m1', category: 'MOBILITY',
-        name: 'Rotations Complètes CARs', sets: 2, reps: '5/côté', rest: 10,
-        instructions: 'Assis ou debout sur une jambe, réalise des rotations maximales de la cheville : pointe vers le haut (dorsiflexion), vers le bas (extension), vers l\'intérieur, vers l\'extérieur. Amplitude maximale et lente. Répète dans les deux sens.',
-        tips: ['Jambe fixe (ne pas compenser avec la jambe)', 'Amplitude maximale = objectif', 'Lenteur = contrôle'],
-        muscles: ['Tibial antérieur', 'Péroniers', 'Tibial postérieur', 'Triceps sural'],
-      },
-      {
-        id: 'ch-m2', category: 'ACTIVATION',
-        name: 'Single Leg Calf Raise + Hold', sets: 3, reps: '12 + 5s', rest: 30,
-        instructions: 'Debout sur un pied au bord d\'une marche, talon qui dépasse. Descends le talon vers le bas (étirement). Monte sur la pointe des pieds (contraction). En haut, maintiens 3-5 secondes. Descends lentement (3s).',
-        tips: ['Descente LENTE et contrôlée', 'Maintien en haut = force du mollet', 'Si trop difficile : 2 pieds au début'],
-        muscles: ['Gastrocnémien', 'Soléaire', 'Fibulaires', 'Tibial postérieur'],
-      },
-    ],
-    stretching: [
-      {
-        id: 'ch-s1', category: 'STRETCHING',
-        name: 'Étirement Mollet + Soléaire', sets: 2, reps: '45s/position', rest: 15, isTimed: true,
-        instructions: 'Position 1 (Gastro) : jambe arrière tendue, talon plat, pousse le mur. Position 2 (Soléaire) : même chose mais genou arrière légèrement fléchi. 45s dans chaque position. Sens la différence entre les deux.',
-        tips: ['Talon COLLÉ au sol impérativement', 'La fente : genou dans l\'axe du pied', 'Deux positions = deux muscles différents'],
-        muscles: ['Gastrocnémien', 'Soléaire', 'Achille'],
-      },
-      {
-        id: 'ch-s2', category: 'STRETCHING',
-        name: 'Étirement Plantar Fascia', sets: 2, reps: '45s/côté', rest: 10, isTimed: true,
-        instructions: 'Assis, croise la cheville droite sur le genou gauche. Attrape les orteils droits et plie-les vers le tibia (extension). Masse simultanément la voûte plantaire avec le pouce. Crucial pour la prévention des fasciites et pour les water-polo players.',
-        tips: ['Orteils vraiment vers le tibia', 'Massage circulaire voûte plantaire', 'Faire le matin avant de poser le pied par terre'],
-        muscles: ['Fascia plantaire', 'Fléchisseurs orteils', 'Intrinsèques du pied'],
-      },
-    ],
-  },
-
   Thorax: {
     mobility: [
-      {
-        id: 'th-m1', category: 'MOBILITY',
-        name: 'Extension Thoracique au Rouleau', sets: 3, reps: '60s/position', rest: 15, isTimed: true,
-        instructions: 'Place un rouleau de massage sous les omoplates (horizontalement). Bras croisés sur la poitrine ou derrière la tête. Laisse ton dos s\'étendre vers l\'arrière sur le rouleau. Déplace le rouleau de T4 à T12 (du haut vers le bas du dos) en petits segments.',
-        tips: ['Ne pas aller sur les lombaires', 'Hanches au sol', 'Respiration lente et profonde dans la position'],
-        muscles: ['Érecteurs thoraciques', 'Rhomboïdes', 'Pectoraux (stretch)'],
-      },
-      {
-        id: 'th-m2', category: 'MOBILITY',
-        name: 'Rotation Thoracique en Fente', sets: 3, reps: '8/côté', rest: 15,
-        instructions: 'En position de fente basse, pose la main avant au sol. Lève le bras opposé vers le plafond en cherchant à regarder ta main. Descends ce bras et lève le bras de la jambe arrière. Le genou arrière est au sol pour stabiliser.',
-        tips: ['Hanche basse et stable', 'Regard sur la main qui monte', 'Rotation vient du thorax, pas des lombaires'],
-        muscles: ['Rotateurs thoraciques', 'Obliques', 'Dentelé antérieur'],
-      },
+      { id: 'm1', name: 'Livre Ouvert', sets: 3, reps: '10/côté', tempo: 'Lent', rest: '0s', targetLoad: 'PDC', instructions: 'Allongé sur le côté, ouvrir le bras en suivant du regard.' },
+      { id: 'm2', name: 'Extension Thoracique au Rouleau', sets: 3, reps: '10', tempo: 'Tenir 3s', rest: '0s', targetLoad: 'Rouleau', instructions: 'Rouleau sous les omoplates, extension arrière.' },
     ],
     stretching: [
-      {
-        id: 'th-s1', category: 'STRETCHING',
-        name: 'Prise de Suspension (Porte/Barre)', sets: 3, reps: '30s', rest: 20, isTimed: true,
-        instructions: 'Attrape un cadre de porte, barre ou espaliers. Laisse le poids de ton corps étirer ton rachis. Sens les vertèbres s\'écarter. Pour plus d\'intensité : plie légèrement les genoux pour laisser tout le poids du corps tirer.',
-        tips: ['Se laisser descendre progressivement', 'Épaules actives (pas d\'hyper laxité)', 'Idéal après entraînement chargé'],
-        muscles: ['Grand dorsal', 'Disques intervertébraux', 'Carré des lombes'],
-      },
-      {
-        id: 'th-s2', category: 'STRETCHING',
-        name: 'Grand Dorsal (Pose Prière)', sets: 2, reps: '60s', rest: 15, isTimed: true,
-        instructions: 'À genoux, pose les mains sur un banc ou une chaise devant toi, bras tendus. Descends le buste vers le sol en poussant les fesses vers l\'arrière. Tête entre les bras. Sens l\'étirement dans les flancs et le haut du dos.',
-        tips: ['Bras tendus, ne pas plier les coudes', 'Fesses vers les talons', 'Cherche la sensation dans les aisselles'],
-        muscles: ['Grand dorsal', 'Grand rond', 'Triceps (étirement secondaire)'],
-      },
+      { id: 's1', name: 'Grand Dorsal au Mur', sets: 2, reps: '60s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Mains au mur, pousser les fesses en arrière.' },
+      { id: 's2', name: 'Suspension Barre', sets: 3, reps: '30s', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Suspendu pour décompresser la colonne.' },
+    ],
+  },
+  Dos: {
+    mobility: [
+      { id: 'm1', name: 'Chat / Vache', sets: 3, reps: '10', tempo: 'Lent', rest: '0s', targetLoad: 'PDC', instructions: 'Alterner dos rond et dos creux, vertèbre par vertèbre.' },
+      { id: 'm2', name: 'Jefferson Curl', sets: 3, reps: '5', tempo: '5050', rest: '0s', targetLoad: 'Léger', instructions: 'Enroulement complet de la colonne avec charge légère.' },
+    ],
+    stretching: [
+      { id: 's1', name: "Posture de l'Enfant", sets: 2, reps: '60s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Fesses sur les talons, bras loin devant.' },
+      { id: 's2', name: 'Carré des Lombes', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Étirement du carré des lombaires assis ou debout.' },
+    ],
+  },
+  Hanche: {
+    mobility: [
+      { id: 'm1', name: '90/90 Switch', sets: 3, reps: '8/côté', tempo: 'Lent', rest: '0s', targetLoad: 'PDC', instructions: 'Rotation interne/externe des hanches au sol.' },
+      { id: 'm2', name: 'Rotations Hanche (CARs)', sets: 3, reps: '5/côté', tempo: 'Très lent', rest: '0s', targetLoad: 'PDC', instructions: 'Grands cercles avec le genou, debout.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Psoas', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Genou au sol, hanches vers l\'avant, dos droit.' },
+      { id: 's2', name: 'Posture du Pigeon', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Jambe pliée devant, jambe tendue derrière.' },
+    ],
+  },
+  Genou: {
+    mobility: [
+      { id: 'm1', name: 'Rotation Tibiale', sets: 3, reps: '10', tempo: 'Lent', rest: '0s', targetLoad: 'PDC', instructions: 'Assis, tourner le pied int/ext en bloquant le fémur.' },
+      { id: 'm2', name: 'Step-up Petersen', sets: 3, reps: '12', tempo: '2010', rest: '0s', targetLoad: 'PDC', instructions: 'Montée sur pointe de pied sur petite marche (Vaste Interne).' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Quadriceps', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Talon fesse debout ou allongé.' },
+      { id: 's2', name: 'Ischio-Jambiers', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Jambe surélevée, dos droit.' },
+    ],
+  },
+  Cheville: {
+    mobility: [
+      { id: 'm1', name: 'Genou au Mur (Dorsiflexion)', sets: 3, reps: '10', tempo: 'Tenir 2s', rest: '0s', targetLoad: 'PDC', instructions: 'Avancer le genou sans décoller le talon.' },
+      { id: 'm2', name: 'Rotations Cheville (CARs)', sets: 3, reps: '10/côté', tempo: 'Lent', rest: '0s', targetLoad: 'PDC', instructions: 'Rotations maximales de la cheville.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Mollet', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Pousser le mur, jambe arrière tendue.' },
+      { id: 's2', name: 'Étirement Soléaire', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Même chose genou légèrement fléchi.' },
+    ],
+  },
+
+  // ── GROUPES MUSCULAIRES ──
+  Pectoraux: {
+    mobility: [
+      { id: 'm1', name: 'Ouvertures Bras (Chest Fly Debout)', sets: 3, reps: '12', tempo: '2020', rest: '30s', targetLoad: 'Élastique', instructions: 'Bras légèrement fléchis, ouvrir et fermer devant la poitrine.' },
+      { id: 'm2', name: 'Rotation Externe Épaule', sets: 3, reps: '15', tempo: '2020', rest: '0s', targetLoad: 'Élastique', instructions: 'Coude à 90°, tourner le bras vers l\'extérieur en résistance.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Pecs en Porte', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Bras à 90° contre le cadre de porte, tourner le buste.' },
+      { id: 's2', name: 'Bras en Croix au Sol', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Allongé, bras tendu en croix, laisser la gravité étirer le pec.' },
+    ],
+  },
+  'Grand Dorsal': {
+    mobility: [
+      { id: 'm1', name: 'Tirages en Rotation', sets: 3, reps: '10/côté', tempo: '2020', rest: '30s', targetLoad: 'Élastique', instructions: 'Tirer le coude vers le bas en rotation externe.' },
+      { id: 'm2', name: 'Étirement Actif Grand Dorsal', sets: 3, reps: '8', tempo: '3030', rest: '0s', targetLoad: 'PDC', instructions: 'Bras levés, grandir vers le haut puis relâcher.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Grand Dorsal à la Barre', sets: 2, reps: '60s', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Mains sur une barre à hauteur des épaules, pousser les hanches en arrière.' },
+      { id: 's2', name: 'Cobra au Sol', sets: 2, reps: '45s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Allongé ventre, bras tendus, relever le buste. Hanches au sol.' },
+    ],
+  },
+  Biceps: {
+    mobility: [
+      { id: 'm1', name: 'Rotations Avant-Bras', sets: 3, reps: '10', tempo: '2020', rest: '0s', targetLoad: 'PDC', instructions: 'Coude fixe, tourner la paume vers le haut et le bas.' },
+      { id: 'm2', name: 'Curls Excentrique', sets: 3, reps: '8', tempo: '4010', rest: '60s', targetLoad: 'Léger', instructions: 'Descente lente en 4 secondes. Concentre-toi sur l\'excentrique.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Biceps au Mur', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Main à hauteur d\'épaule contre le mur, pouce vers le bas, tourner le corps.' },
+      { id: 's2', name: 'Étirement Avant-Bras (Prière Inversée)', sets: 2, reps: '45s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Dos des mains joints, coudes écartés, montée lente.' },
+    ],
+  },
+  Triceps: {
+    mobility: [
+      { id: 'm1', name: 'Dips Articulaires (sans charge)', sets: 3, reps: '10', tempo: '2020', rest: '30s', targetLoad: 'PDC', instructions: 'Descente contrôlée, sans aller en douleur.' },
+      { id: 'm2', name: 'Extensions Triceps Élastique', sets: 3, reps: '15', tempo: '2020', rest: '30s', targetLoad: 'Élastique', instructions: 'Coude haut et fixe, extension complète puis lâcher contrôlé.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Triceps Overhead', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Bras plié derrière la tête, pousser le coude avec l\'autre main.' },
+      { id: 's2', name: 'Étirement Croisé Bras', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Bras tendu en travers de la poitrine, appuyer sur le coude.' },
+    ],
+  },
+  Trapèzes: {
+    mobility: [
+      { id: 'm1', name: 'Élévations Épaules (Shrugs)', sets: 3, reps: '10', tempo: '1130', rest: '30s', targetLoad: 'PDC', instructions: 'Monter les épaules, tenir 3s en haut, descendre lentement.' },
+      { id: 'm2', name: 'Face Pulls', sets: 3, reps: '15', tempo: '2020', rest: '30s', targetLoad: 'Élastique', instructions: 'Tirer l\'élastique vers le visage, coudes hauts, finir en rotation externe.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Trapèze Latéral', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Tête inclinée sur le côté, épaule opposée vers le bas.' },
+      { id: 's2', name: 'Roulement Mousse Trapèze', sets: 2, reps: '60s/côté', tempo: 'Lent', rest: '10s', targetLoad: 'Rouleau', instructions: 'Rouleau sous le trapèze, chercher les points sensibles.' },
+    ],
+  },
+  Quadriceps: {
+    mobility: [
+      { id: 'm1', name: 'Step-up Petersen', sets: 3, reps: '12/côté', tempo: '2010', rest: '30s', targetLoad: 'PDC', instructions: 'Montée sur pointe de pied, focus sur le Vaste Interne.' },
+      { id: 'm2', name: 'Sissy Squat (assisté)', sets: 3, reps: '8', tempo: '3030', rest: '60s', targetLoad: 'PDC', instructions: 'Appui d\'une main, s\'accroupir en partant des genoux.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Quadriceps Debout', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Talon fesse, genou dans l\'axe. Pousser la hanche en avant.' },
+      { id: 's2', name: 'Fente Étirement Quad', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Genou arrière au sol, bassin vers l\'avant, dos droit.' },
+    ],
+  },
+  'Ischio-Jambiers': {
+    mobility: [
+      { id: 'm1', name: 'Nordic Curl (excentrique)', sets: 3, reps: '5', tempo: '5010', rest: '90s', targetLoad: 'PDC', instructions: 'Descente très lente, contrôlée. Stopper avant le sol si besoin.' },
+      { id: 'm2', name: 'Good Morning', sets: 3, reps: '10', tempo: '3030', rest: '60s', targetLoad: 'Léger', instructions: 'Barre sur épaules, genoux semi-fléchis, pencher depuis les hanches.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Ischio Jambe Surélevée', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Jambe sur une table ou banc, dos droit, pencher depuis les hanches.' },
+      { id: 's2', name: 'Étirement Sol (RDL passif)', sets: 2, reps: '60s', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Assis jambes tendues, se pencher vers l\'avant sans arrondir le dos.' },
+    ],
+  },
+  Adducteurs: {
+    mobility: [
+      { id: 'm1', name: 'Fente Latérale (Cossack Squat)', sets: 3, reps: '8/côté', tempo: '2020', rest: '30s', targetLoad: 'PDC', instructions: 'Descendre sur une jambe, l\'autre tendue. Pied à plat si possible.' },
+      { id: 'm2', name: 'Pliés (Sumo)', sets: 3, reps: '10', tempo: '3030', rest: '30s', targetLoad: 'PDC', instructions: 'Pieds très écartés, descendre lentement, genoux dans l\'axe.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Papillon', sets: 2, reps: '60s', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Plantes de pieds jointes, pousser les genoux vers le bas.' },
+      { id: 's2', name: 'Grand Écart Latéral (progressif)', sets: 2, reps: '90s', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Jambes écartées, descendre progressivement, mains au sol.' },
+    ],
+  },
+  Fessiers: {
+    mobility: [
+      { id: 'm1', name: 'Hip Thrust (PDC)', sets: 3, reps: '15', tempo: '2021', rest: '30s', targetLoad: 'PDC', instructions: 'Épaules sur le banc, monter les hanches, serrer les fesses en haut.' },
+      { id: 'm2', name: 'Clamshells', sets: 3, reps: '15/côté', tempo: 'Dynamique', rest: '0s', targetLoad: 'Élastique', instructions: 'Allongé sur le côté, ouvrir le genou sans bouger le bassin.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Figure 4 (Pigeon au Sol)', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '15s', targetLoad: 'PDC', instructions: 'Allongé, croiser la cheville sur le genou opposé, tirer la jambe vers soi.' },
+      { id: 's2', name: 'Étirement Fessier Assis', sets: 2, reps: '45s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Assis, croiser une jambe, se pencher vers l\'avant.' },
+    ],
+  },
+  Mollets: {
+    mobility: [
+      { id: 'm1', name: 'Mollets Excentriques sur Marche', sets: 3, reps: '10', tempo: '4010', rest: '60s', targetLoad: 'PDC', instructions: 'Monter sur 2 pieds, descendre sur 1 seul. Descente en 4s.' },
+      { id: 'm2', name: 'Sauts Pogo', sets: 3, reps: '20', tempo: 'Explosif', rest: '30s', targetLoad: 'PDC', instructions: 'Rebonds sur les orteils, jambes quasi-tendues, contact sol minimal.' },
+    ],
+    stretching: [
+      { id: 's1', name: 'Étirement Gastrocnémien', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Pousser le mur, jambe arrière tendue, talon au sol.' },
+      { id: 's2', name: 'Étirement Soléaire', sets: 2, reps: '60s/côté', tempo: 'Statique', rest: '10s', targetLoad: 'PDC', instructions: 'Même position mais genou légèrement fléchi.' },
     ],
   },
 };
 
-// ─── Routines globales ────────────────────────────────────────
-const PRE_MATCH: EnhancedExercise[] = [
-  {
-    id: 'pre1', category: 'ACTIVATION', name: 'Rotations Articulaires Globales', sets: 1, reps: '2 min', rest: 0, isTimed: true,
-    instructions: 'Réveille chaque articulation dans l\'ordre : chevilles (cercles), genoux (demi-squat), hanches (cercles bras sur les côtés), épaules (grands cercles), poignets, cou (rotations douces). 30 secondes par zone.',
-    tips: ['Sens chaque articulation se lubrifier', 'Mouvement fluide et progressif', 'Accélère progressivement'],
-    muscles: ['Global'],
-  },
-  {
-    id: 'pre2', category: 'ACTIVATION', name: 'High Knees + Arm Swing', sets: 2, reps: '20s', rest: 10, isTimed: true,
-    instructions: 'Monte les genoux alternativement haut (90°) en synchronisant les bras opposés. Monte sur la pointe des pieds à chaque élévation. Augmente la vitesse progressivement.',
-    tips: ['Pointe de pied vers le tibia en montant', 'Regard droit devant', 'Rythme régulier puis explosif'],
-    muscles: ['Hip flexors', 'Core', 'Mollets'],
-  },
-  {
-    id: 'pre3', category: 'ACTIVATION', name: 'Lateral Shuffle + Touch', sets: 2, reps: '15s/côté', rest: 15, isTimed: true,
-    instructions: 'Position basse (semi-fléchi), déplace-toi latéralement sur 4-5 pas, touche le sol de la main à chaque fois que tu arrives sur le côté. Exploses vers le côté opposé. Simule les déplacements en piscine.',
-    tips: ['Rester bas (ne pas se relever)', 'Toucher le sol = position basse maximale', 'Accélère sur les 3 dernières répétitions'],
-    muscles: ['Fessiers', 'Adducteurs', 'Stabilisateurs genou'],
-  },
-  {
-    id: 'pre4', category: 'ACTIVATION', name: 'Activation Épaules (Band Pull Apart)', sets: 3, reps: '15', rest: 15,
-    instructions: 'Tiens un élastique de résistance légère devant toi, bras tendus. Écarte les bras en tirant l\'élastique vers l\'arrière, en serrant les omoplates. Maintiens 1s en fin d\'amplitude. Reviens lentement.',
-    tips: ['Coudes tendus', 'Serrer les omoplates à chaque rep', 'Élastique à hauteur des épaules'],
-    muscles: ['Rhomboïdes', 'Trapèze moyen', 'Rotateurs externes'],
-  },
-  {
-    id: 'pre5', category: 'ACTIVATION', name: 'Fentes Dynamiques + Rotation', sets: 2, reps: '8/côté', rest: 20,
-    instructions: 'Fente avant dynamic. À la position basse, tourne le buste du côté de la jambe avant et lève le bras opposé vers le ciel. Reviens et enchaine. Alterne droite/gauche.',
-    tips: ['Genou avant dans l\'axe du pied', 'Rotation complète du buste', 'Explosif sur le retour en position debout'],
-    muscles: ['Quadriceps', 'Fessiers', 'Thorax', 'Épaules'],
-  },
+// ─── BODY MAP DATA ───────────────────────────────────────────────────────────
+// Coordonnées en % dans le viewBox SVG 200×470
+
+type ZoneType = 'joint' | 'muscle';
+
+interface BodyZone {
+  id: string;       // clé dans ROUTINES
+  label: string;    // texte affiché
+  x: number;        // % horizontal
+  y: number;        // % vertical
+  type: ZoneType;
+  bilateral?: boolean; // si true, on affiche deux points gauche/droite
+}
+
+// Points articulaires (ronds rouges pulsants)
+const JOINT_ZONES: BodyZone[] = [
+  { id: 'Cou',      label: 'Cou',      x: 50, y: 10.5, type: 'joint' },
+  { id: 'Épaule',   label: 'Épaule',   x: 28, y: 17,   type: 'joint', bilateral: true },
+  { id: 'Coude',    label: 'Coude',    x: 24, y: 30,   type: 'joint', bilateral: true },
+  { id: 'Poignet',  label: 'Poignet',  x: 21, y: 43,   type: 'joint', bilateral: true },
+  { id: 'Thorax',   label: 'Thorax',   x: 50, y: 24,   type: 'joint' },
+  { id: 'Dos',      label: 'Dos',      x: 50, y: 37,   type: 'joint' },
+  { id: 'Hanche',   label: 'Hanche',   x: 42, y: 52,   type: 'joint', bilateral: true },
+  { id: 'Genou',    label: 'Genou',    x: 38, y: 72,   type: 'joint', bilateral: true },
+  { id: 'Cheville', label: 'Cheville', x: 38, y: 91,   type: 'joint', bilateral: true },
 ];
 
-const RECOVERY: EnhancedExercise[] = [
-  {
-    id: 'rec1', category: 'STRETCHING', name: 'Foam Rolling Ischio-Jambiers', sets: 1, reps: '60s/jambe', rest: 0, isTimed: true,
-    instructions: 'Assis sur le sol, rouleau sous une cuisse. Utilise les bras pour lever les fesses et rouler lentement de la fesse au creux du genou. Fais des petits allers-retours de 2 cm. Quand tu trouves un point sensible, reste dessus 10-15s.',
-    tips: ['Ne pas rouler sur la zone sensible directement (aller autour)', 'Croise la jambe opposée par-dessus pour intensifier', 'Évite la fosse poplitée (creux du genou)'],
-    muscles: ['Biceps fémoral', 'Semi-tendineux', 'TFL'],
-  },
-  {
-    id: 'rec2', category: 'STRETCHING', name: 'Étirement Grand Dorsal Suspendu', sets: 3, reps: '30s', rest: 15, isTimed: true,
-    instructions: 'Suspension à une barre ou cadre de porte. Lâche tout le poids du corps. Tourne légèrement le bassin pour décompresser chaque côté. Respiration lente. Après l\'eau, le dos a besoin de décompression.',
-    tips: ['Epaules actives (légère contraction)', 'Respiration abdominale profonde', 'Se laisser aller progressivement'],
-    muscles: ['Grand dorsal', 'Colonne vertébrale', 'Carré des lombes'],
-  },
-  {
-    id: 'rec3', category: 'STRETCHING', name: 'Étirement Global Membres Inférieurs', sets: 2, reps: '90s/côté', rest: 20, isTimed: true,
-    instructions: 'Couché sur le dos, Posture du Pigeon (figure 4). Tiens 45s. Puis saisit la jambe et ramène les deux jambes vers la poitrine (rotation externe max). Tiens 45s. Change de côté.',
-    tips: ['Dos plat au sol tout le long', 'Ne force jamais sur le genou', 'Respire dans l\'étirement pour progresser'],
-    muscles: ['Piriforme', 'Grand fessier', 'Ischio-jambiers', 'TFL'],
-  },
-  {
-    id: 'rec4', category: 'MOBILITY', name: 'Respiration Diaphragmatique', sets: 1, reps: '5 min', rest: 0, isTimed: true,
-    instructions: 'Allongé sur le dos, genoux fléchis. Place une main sur le ventre, une sur la poitrine. Inspire par le nez en gonflant UNIQUEMENT le ventre (4s). Retiens (2s). Expire lentement par la bouche (6s). La main sur la poitrine ne bouge pas.',
-    tips: ['Main sur le ventre = bouge, main sur poitrine = immobile', 'Expire complètement, vide les poumons', 'Active le système nerveux parasympathique (récupération)'],
-    muscles: ['Diaphragme', 'Intercostaux', 'Système nerveux autonome'],
-  },
+// Zones musculaires (losanges bleus)
+const MUSCLE_ZONES: BodyZone[] = [
+  { id: 'Pectoraux',        label: 'Pectoraux',     x: 50, y: 21,   type: 'muscle' },
+  { id: 'Grand Dorsal',     label: 'Grand Dorsal',  x: 50, y: 30,   type: 'muscle' },
+  { id: 'Trapèzes',         label: 'Trapèzes',      x: 50, y: 14,   type: 'muscle' },
+  { id: 'Biceps',           label: 'Biceps',        x: 23, y: 24,   type: 'muscle', bilateral: true },
+  { id: 'Triceps',          label: 'Triceps',       x: 26, y: 27,   type: 'muscle', bilateral: true },
+  { id: 'Quadriceps',       label: 'Quadriceps',    x: 38, y: 63,   type: 'muscle', bilateral: true },
+  { id: 'Ischio-Jambiers',  label: 'Ischio',        x: 40, y: 67,   type: 'muscle', bilateral: true },
+  { id: 'Adducteurs',       label: 'Adducteurs',    x: 46, y: 59,   type: 'muscle', bilateral: true },
+  { id: 'Fessiers',         label: 'Fessiers',      x: 44, y: 55,   type: 'muscle', bilateral: true },
+  { id: 'Mollets',          label: 'Mollets',       x: 39, y: 80,   type: 'muscle', bilateral: true },
 ];
 
-// ─── Composant Timer ──────────────────────────────────────────
-const Timer: React.FC<{ duration: number; onDone: () => void }> = ({ duration, onDone }) => {
-  const [remaining, setRemaining] = useState(duration);
-  const [running, setRunning] = useState(false);
-  const intervalRef = useRef<any>(null);
+// ─── EXERCISE CARD ───────────────────────────────────────────────────────────
+const ExerciseCard: React.FC<{ ex: Exercise; idx: number }> = ({ ex, idx }) => {
+  const [timerActive, setTimerActive] = useState(false);
+  const [timeLeft, setTimeLeft]       = useState<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const parseSeconds = (str: string): number | null => {
+    const m = str.match(/(\d+)/);
+    if (!m) return null;
+    const n = parseInt(m[1]);
+    if (str.includes('min')) return n * 60;
+    return n;
+  };
+
+  const startTimer = () => {
+    const s = parseSeconds(ex.rest !== '0s' ? ex.rest : ex.reps);
+    if (!s) return;
+    setTimeLeft(s);
+    setTimerActive(true);
+  };
 
   useEffect(() => {
-    if (running && remaining > 0) {
-      intervalRef.current = setInterval(() => {
-        setRemaining(r => {
-          if (r <= 1) { clearInterval(intervalRef.current); setRunning(false); onDone(); return 0; }
-          return r - 1;
-        });
-      }, 1000);
+    if (timerActive && timeLeft !== null) {
+      if (timeLeft <= 0) { setTimerActive(false); setTimeLeft(null); return; }
+      intervalRef.current = setInterval(() => setTimeLeft(t => (t ?? 1) - 1), 1000);
     }
-    return () => clearInterval(intervalRef.current);
-  }, [running]);
-
-  const pct = ((duration - remaining) / duration) * 100;
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [timerActive, timeLeft]);
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      {/* Cercle timer */}
-      <div className="relative w-20 h-20">
-        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6"/>
-          <circle cx="40" cy="40" r="36" fill="none" stroke="#E8B800" strokeWidth="6"
-            strokeDasharray={`${2 * Math.PI * 36}`}
-            strokeDashoffset={`${2 * Math.PI * 36 * (1 - pct/100)}`}
-            strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-display font-bold text-xl text-white">{remaining}s</span>
-        </div>
-      </div>
-      <button
-        onClick={() => running ? (clearInterval(intervalRef.current), setRunning(false)) : setRunning(true)}
-        className="px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
-        style={{ background: running ? 'rgba(239,68,68,0.2)' : 'rgba(232,184,0,0.2)', color: running ? '#ef4444' : '#E8B800', border: `1px solid ${running ? 'rgba(239,68,68,0.4)' : 'rgba(232,184,0,0.4)'}` }}
-      >
-        {remaining === 0 ? '✓ Terminé' : running ? '⏸ Pause' : remaining === duration ? '▶ Démarrer' : '▶ Reprendre'}
-      </button>
-      {remaining === 0 && (
-        <button onClick={() => setRemaining(duration)} className="text-xs" style={{ color: '#8B9BB4' }}>↺ Recommencer</button>
-      )}
-    </div>
-  );
-};
-
-// ─── Composant Carte Exercice Interactive ─────────────────────
-const ExerciseCard: React.FC<{ ex: EnhancedExercise; index: number }> = ({ ex, index }) => {
-  const [setsCompleted, setSetsCompleted] = useState<boolean[]>(Array(ex.sets).fill(false));
-  const [showTips, setShowTips] = useState(false);
-  const [resting, setResting] = useState(false);
-
-  const allDone = setsCompleted.every(Boolean);
-  const completedCount = setsCompleted.filter(Boolean).length;
-
-  const handleSetDone = (i: number) => {
-    const next = [...setsCompleted];
-    next[i] = !next[i];
-    setSetsCompleted(next);
-    if (next[i] && ex.rest > 0 && i < ex.sets - 1) setResting(true);
-  };
-
-  const getCategoryColor = () => {
-    switch(ex.category) {
-      case 'MOBILITY': return '#E8B800';
-      case 'STRETCHING': return '#3b82f6';
-      case 'ACTIVATION': return '#22c55e';
-    }
-  };
-
-  return (
-    <div className="rounded-2xl overflow-hidden transition-all" style={{
-      background: allDone ? 'rgba(34,197,94,0.08)' : 'rgba(0,0,0,0.3)',
-      border: `1px solid ${allDone ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
-    }}>
-      {/* Header */}
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm" style={{ background: `${getCategoryColor()}20`, color: getCategoryColor() }}>
-            {index + 1}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ background: `${getCategoryColor()}20`, color: getCategoryColor() }}>
-                {ex.category}
-              </span>
-              {allDone && <span className="text-[9px] font-bold text-green-400">✓ TERMINÉ</span>}
-            </div>
-            <h3 className="text-white font-bold uppercase tracking-wide">{ex.name}</h3>
-          </div>
-        </div>
-
-        {/* Instructions */}
-        <p className="text-sm mt-3 leading-relaxed pl-11" style={{ color: '#C8D4E8' }}>
-          {ex.instructions}
-        </p>
-
-        {/* Muscles ciblés */}
-        <div className="flex flex-wrap gap-1 mt-2 pl-11">
-          {ex.muscles.map((m, i) => (
-            <span key={i} className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', color: '#8B9BB4' }}>
-              {m}
-            </span>
-          ))}
-        </div>
-
-        {/* Conseils */}
-        <button onClick={() => setShowTips(!showTips)} className="mt-2 ml-11 text-xs flex items-center gap-1" style={{ color: '#E8B800' }}>
-          <span>{showTips ? '▼' : '▶'}</span> Conseils
-        </button>
-        {showTips && (
-          <ul className="ml-11 mt-2 space-y-1">
-            {ex.tips.map((tip, i) => (
-              <li key={i} className="text-xs flex items-start gap-2" style={{ color: '#8B9BB4' }}>
-                <span style={{ color: '#E8B800' }}>→</span> {tip}
-              </li>
-            ))}
-          </ul>
+    <GlassCard className="p-5 border-l-2 border-l-white/20">
+      <div className="flex justify-between items-start mb-1">
+        <span className="text-[10px] text-nexus-gray uppercase font-bold tracking-widest">#{idx + 1}</span>
+        {timerActive && timeLeft !== null && (
+          <span className="text-nexus-gold font-display text-lg font-bold tabular-nums">
+            {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+          </span>
         )}
       </div>
-
-      {/* Paramètres */}
-      <div className="grid grid-cols-4 gap-px" style={{ background: 'rgba(255,255,255,0.05)' }}>
+      <h3 className="font-bold text-white uppercase tracking-wide text-base mb-1">{ex.name}</h3>
+      {ex.instructions && (
+        <p className="text-xs text-nexus-gray mb-4 italic pl-3 border-l border-nexus-gray/30">
+          "{ex.instructions}"
+        </p>
+      )}
+      <div className="grid grid-cols-4 gap-2 text-center text-xs mb-3">
         {[
-          { label: 'Séries', val: `${completedCount}/${ex.sets}` },
-          { label: ex.isTimed ? 'Durée' : 'Reps', val: ex.reps },
-          { label: 'Repos', val: ex.rest > 0 ? `${ex.rest}s` : 'Pas de repos' },
-          { label: 'Charge', val: ex.load || 'PDC' },
-        ].map((p, i) => (
-          <div key={i} className="text-center py-3 px-1" style={{ background: 'rgba(0,0,0,0.3)' }}>
-            <div className="text-[9px] uppercase font-bold mb-1" style={{ color: '#8B9BB4' }}>{p.label}</div>
-            <div className="font-display font-bold text-white text-sm">{p.val}</div>
+          { label: 'Séries', val: ex.sets },
+          { label: 'Reps', val: ex.reps },
+          { label: 'Repos', val: ex.rest },
+          { label: 'Tempo', val: ex.tempo },
+        ].map(cell => (
+          <div key={cell.label} className="bg-black/30 rounded-lg p-2 border border-white/5">
+            <div className="text-nexus-gray uppercase text-[9px] mb-1">{cell.label}</div>
+            <div className="text-white font-display font-bold text-base">{cell.val}</div>
           </div>
         ))}
       </div>
-
-      {/* Timer si timed */}
-      {ex.isTimed && ex.rest > 0 && (
-        <div className="p-4 flex justify-center" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Timer duration={parseInt(ex.reps)} onDone={() => setSetsCompleted(prev => { const n=[...prev]; const idx=n.findIndex(v=>!v); if(idx>=0) n[idx]=true; return n; })} />
-        </div>
+      {ex.rest !== '0s' && (
+        <button
+          onClick={timerActive ? () => { setTimerActive(false); setTimeLeft(null); } : startTimer}
+          className={`w-full py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+            timerActive ? 'bg-nexus-gold/20 text-nexus-gold border border-nexus-gold/30' : 'bg-white/5 text-nexus-gray hover:text-white hover:bg-white/10'
+          }`}
+        >
+          {timerActive ? '⏸ Pause timer' : '⏱ Démarrer timer repos'}
+        </button>
       )}
-
-      {/* Séries à cocher */}
-      <div className="p-4 space-y-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <p className="text-[10px] uppercase font-bold mb-2" style={{ color: '#8B9BB4' }}>Coche chaque série terminée :</p>
-        <div className="flex gap-2 flex-wrap">
-          {setsCompleted.map((done, i) => (
-            <button
-              key={i}
-              onClick={() => handleSetDone(i)}
-              className="flex-1 min-w-[60px] py-2.5 rounded-xl font-bold text-sm transition-all"
-              style={{
-                background: done ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${done ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                color: done ? '#22c55e' : '#8B9BB4',
-              }}
-            >
-              {done ? `✓ S${i+1}` : `S${i+1}`}
-            </button>
-          ))}
-        </div>
-
-        {/* Timer de repos */}
-        {resting && ex.rest > 0 && (
-          <div className="mt-3 p-3 rounded-xl flex items-center gap-3 animate-in fade-in" style={{ background: 'rgba(232,184,0,0.1)', border: '1px solid rgba(232,184,0,0.2)' }}>
-            <span>⏱</span>
-            <div className="flex-1">
-              <p className="text-xs font-bold" style={{ color: '#E8B800' }}>Repos : {ex.rest} secondes</p>
-            </div>
-            <Timer duration={ex.rest} onDone={() => setResting(false)} />
-          </div>
-        )}
-      </div>
-    </div>
+    </GlassCard>
   );
 };
 
-// ─── Composant Principal ──────────────────────────────────────
-const JOINTS_LIST = ['Cou', 'Epaule', 'Thorax', 'Dos', 'Hanche', 'Genou', 'Cheville'];
-const JOINT_EMOJIS: Record<string, string> = {
-  Cou: '🦒', Epaule: '💪', Thorax: '🫁', Dos: '🏋️', Hanche: '🦵', Genou: '🦿', Cheville: '🦶'
+// ─── BODY MAP DOT ─────────────────────────────────────────────────────────────
+interface DotProps {
+  zone: BodyZone;
+  side?: 'L' | 'R';
+  onClick: (id: string) => void;
+  active: boolean;
+}
+
+const BodyDot: React.FC<DotProps> = ({ zone, side, onClick, active }) => {
+  const mirrorX = side === 'R' ? 100 - (zone.x - 50) + (zone.x > 50 ? 0 : 0) : zone.x;
+  // For bilateral: L stays at x, R mirrors to 100-x+50... simpler: R = 100 - zone.x
+  const finalX = side === 'R' ? (100 - zone.x) : zone.x;
+
+  const isJoint = zone.type === 'joint';
+  const color = isJoint ? '#E52E01' : '#3B82F6';
+  const bgColor = isJoint ? 'bg-nexus-red' : 'bg-blue-500';
+  const shadowColor = isJoint ? '#E52E01' : '#3B82F6';
+
+  return (
+    <button
+      onClick={() => onClick(zone.id)}
+      className={`absolute flex items-center justify-center group z-10 ${isJoint ? 'w-9 h-9 -ml-4 -mt-4' : 'w-8 h-8 -ml-4 -mt-4'}`}
+      style={{ left: `${finalX}%`, top: `${zone.y}%` }}
+      title={zone.label + (side ? (side === 'L' ? ' G' : ' D') : '')}
+    >
+      {isJoint ? (
+        <>
+          <div
+            className={`absolute w-3 h-3 rounded-full shadow-md group-hover:scale-150 transition-transform duration-200 border border-white/50 ${active ? 'scale-150' : ''}`}
+            style={{ backgroundColor: color, boxShadow: `0 0 8px ${shadowColor}` }}
+          />
+          <div className="absolute w-6 h-6 rounded-full animate-ping opacity-0 group-hover:opacity-30"
+            style={{ backgroundColor: color }} />
+        </>
+      ) : (
+        /* Losange pour les muscles */
+        <div
+          className={`absolute w-3 h-3 rotate-45 transition-transform duration-200 group-hover:scale-150 border border-white/30 ${active ? 'scale-150' : ''}`}
+          style={{ backgroundColor: color + 'CC', boxShadow: `0 0 6px ${shadowColor}80` }}
+        />
+      )}
+    </button>
+  );
 };
 
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export const CareView: React.FC<CareViewProps> = ({ athlete }) => {
-  const [view, setView] = useState<'MENU' | 'ROUTINE' | 'JOINT_SELECT' | 'JOINT_TYPE' | 'JOINT_EX'>('MENU');
-  const [activeRoutine, setActiveRoutine] = useState<EnhancedExercise[]>([]);
-  const [routineTitle, setRoutineTitle] = useState('');
-  const [selectedJoint, setSelectedJoint] = useState('');
-  const [jointType, setJointType] = useState<'mobility' | 'stretching'>('mobility');
-  const [done, setDone] = useState(false);
+  const [selectedZone, setSelectedZone]         = useState<string | null>(null);
+  const [routineType, setRoutineType]           = useState<'mobility' | 'stretching' | null>(null);
+  const [activeGlobalRoutine, setActiveGlobalRoutine] = useState<string | null>(null);
+  const [showLegend, setShowLegend]             = useState(false);
 
-  const startRoutine = (title: string, exercises: EnhancedExercise[]) => {
-    setRoutineTitle(title); setActiveRoutine(exercises); setDone(false); setView('ROUTINE');
+  const getRoutine = (zone: string, type: 'mobility' | 'stretching') =>
+    ROUTINES[zone]?.[type] ?? ROUTINES['Épaule'][type];
+
+  const generateWarmUp = (): Exercise[] => {
+    const routine = [...BASE_WARMUP];
+    const map: Record<string, string> = {
+      'Cheville G': 'Cheville', 'Cheville D': 'Cheville',
+      'Hanche G': 'Hanche', 'Hanche D': 'Hanche',
+      'Épaule G': 'Épaule', 'Épaule D': 'Épaule',
+      'Adducteur': 'Adducteurs',
+    };
+    athlete.performance.flexibility.forEach(metric => {
+      if (metric.A < 75) {
+        const key = map[metric.subject];
+        if (key && ROUTINES[key]) {
+          const ex = ROUTINES[key].mobility[0];
+          if (!routine.find(e => e.id === ex.id))
+            routine.push({ ...ex, name: `${ex.name} (${metric.subject})` });
+        }
+      }
+    });
+    return routine;
   };
 
-  // ── VUE ROUTINE ─────────────────────────────────────────────
-  if (view === 'ROUTINE') {
-    return (
-      <div className="px-4 pb-32 pt-2 space-y-4 animate-in fade-in">
-        {/* Header */}
-        <div className="flex items-center gap-3 py-2">
-          <button onClick={() => setView('MENU')} className="text-sm font-bold" style={{ color: '#8B9BB4' }}>← Retour</button>
-          <div className="flex-1">
-            <h2 className="font-display text-xl text-white uppercase">{routineTitle}</h2>
-            <p className="text-xs" style={{ color: '#8B9BB4' }}>{activeRoutine.length} exercices</p>
-          </div>
-        </div>
+  const renderExerciseList = (title: string, exercises: Exercise[], onBack: () => void) => (
+    <div className="space-y-4 animate-in slide-in-from-right">
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={onBack} className="text-nexus-gray text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+          <span>←</span> Retour
+        </button>
+        <span className="text-nexus-gold text-xs font-bold uppercase px-3 py-1 bg-nexus-gold/10 rounded-full border border-nexus-gold/20">
+          ⏱ ~15 min
+        </span>
+      </div>
+      <div className="mb-6">
+        <h2 className="font-display text-3xl text-white uppercase">{title}</h2>
+        {selectedZone && (
+          <p className="text-nexus-gold font-display text-xl uppercase">{selectedZone}</p>
+        )}
+      </div>
+      {exercises.map((ex, idx) => <ExerciseCard key={ex.id} ex={ex} idx={idx} />)}
+      <div className="pt-4">
+        <Button fullWidth onClick={onBack} className="bg-nexus-red shadow-[0_0_20px_rgba(229,46,1,0.4)]">
+          Terminer la Routine
+        </Button>
+      </div>
+    </div>
+  );
 
-        {done && (
-          <div className="rounded-2xl p-4 text-center animate-in zoom-in-95" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
-            <span className="text-3xl block mb-2">🎉</span>
-            <p className="font-bold text-green-400 uppercase">Routine Terminée !</p>
-            <p className="text-xs mt-1" style={{ color: '#8B9BB4' }}>Excellent travail.</p>
+  // ── Routine globale active ──
+  if (activeGlobalRoutine === 'PRE_MATCH')
+    return renderExerciseList('Routine Pré-Match', PRE_MATCH_ROUTINE, () => setActiveGlobalRoutine(null));
+  if (activeGlobalRoutine === 'WARMUP')
+    return renderExerciseList('Routine Échauffement', generateWarmUp(), () => setActiveGlobalRoutine(null));
+
+  // ── Séance ciblée : choix mobilité / stretching ──
+  if (selectedZone && !routineType) {
+    const hasRoutine = !!ROUTINES[selectedZone];
+    const isJoint    = JOINT_ZONES.some(z => z.id === selectedZone);
+    return (
+      <div className="space-y-6 animate-in fade-in">
+        <button onClick={() => setSelectedZone(null)} className="text-nexus-gray text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+          <span>←</span> Retour Carte
+        </button>
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">{isJoint ? '🔴' : '🔵'}</div>
+          <h2 className="font-display text-4xl text-nexus-gold uppercase drop-shadow-lg">{selectedZone}</h2>
+          <p className="text-nexus-gray text-xs uppercase tracking-wide mt-1">
+            {isJoint ? 'Articulation' : 'Groupe Musculaire'} · Protocole Scientifique
+          </p>
+        </div>
+        {!hasRoutine && (
+          <p className="text-center text-nexus-gray text-sm italic">Protocole en cours d'ajout.</p>
+        )}
+        {hasRoutine && (
+          <div className="grid gap-4">
+            <GlassCard
+              onClick={() => setRoutineType('mobility')}
+              className="p-8 text-center cursor-pointer hover:bg-white/5 border-l-4 border-l-nexus-gold"
+            >
+              <h3 className="font-display text-2xl text-white uppercase mb-1">Mobilité</h3>
+              <p className="text-nexus-gray text-xs uppercase tracking-wider">Amplitude & Activation · 15 min</p>
+            </GlassCard>
+            <GlassCard
+              onClick={() => setRoutineType('stretching')}
+              className="p-8 text-center cursor-pointer hover:bg-white/5 border-l-4 border-l-nexus-red"
+            >
+              <h3 className="font-display text-2xl text-white uppercase mb-1">Stretching</h3>
+              <p className="text-nexus-gray text-xs uppercase tracking-wider">Détente & Décompression · 15 min</p>
+            </GlassCard>
           </div>
         )}
-
-        {activeRoutine.map((ex, i) => (
-          <ExerciseCard key={ex.id} ex={ex} index={i} />
-        ))}
-
-        <button
-          onClick={() => { setDone(true); setTimeout(() => setView('MENU'), 1500); }}
-          className="w-full py-4 rounded-2xl font-display font-bold uppercase tracking-widest"
-          style={{ background: 'linear-gradient(135deg, #E8B800, #F5D000)', color: '#0B1628' }}
-        >
-          ✓ Routine Terminée
-        </button>
       </div>
     );
   }
 
-  // ── VUE SÉLECTION ZONE ──────────────────────────────────────
-  if (view === 'JOINT_SELECT') {
-    return (
-      <div className="px-4 pb-32 pt-2 space-y-4 animate-in fade-in">
-        <div className="flex items-center gap-3 py-2">
-          <button onClick={() => setView('MENU')} className="text-sm font-bold" style={{ color: '#8B9BB4' }}>← Retour</button>
-          <h2 className="font-display text-xl text-white uppercase">Choisir une Zone</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {JOINTS_LIST.map(joint => (
-            <button
-              key={joint}
-              onClick={() => { setSelectedJoint(joint); setView('JOINT_TYPE'); }}
-              className="p-5 rounded-2xl text-center transition-all active:scale-95"
-              style={{ background: 'rgba(26,58,122,0.2)', border: '1px solid rgba(232,184,0,0.2)' }}
-            >
-              <span className="text-3xl block mb-2">{JOINT_EMOJIS[joint]}</span>
-              <span className="font-bold text-white uppercase text-sm">{joint}</span>
-              <div className="flex gap-1 justify-center mt-2">
-                <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,184,0,0.15)', color: '#E8B800' }}>Mobilité</span>
-                <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa' }}>Stretching</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+  // ── Exercices de la routine ciblée ──
+  if (selectedZone && routineType) {
+    return renderExerciseList(
+      routineType === 'mobility' ? 'Routine Mobilité' : 'Routine Stretching',
+      getRoutine(selectedZone, routineType),
+      () => setRoutineType(null)
     );
   }
 
-  // ── VUE CHOIX TYPE ──────────────────────────────────────────
-  if (view === 'JOINT_TYPE') {
-    return (
-      <div className="px-4 pb-32 pt-2 space-y-4 animate-in fade-in">
-        <div className="flex items-center gap-3 py-2">
-          <button onClick={() => setView('JOINT_SELECT')} className="text-sm font-bold" style={{ color: '#8B9BB4' }}>← Zones</button>
-          <div className="flex-1">
-            <h2 className="font-display text-2xl text-white uppercase">{JOINT_EMOJIS[selectedJoint]} {selectedJoint}</h2>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <button
-            onClick={() => startRoutine(`${selectedJoint} — Mobilité`, ROUTINES[selectedJoint]?.mobility || [])}
-            className="w-full p-6 rounded-2xl text-left transition-all active:scale-95"
-            style={{ background: 'rgba(232,184,0,0.1)', border: '1px solid rgba(232,184,0,0.3)' }}
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🔄</span>
-              <div>
-                <h3 className="font-display text-xl text-white uppercase">Mobilité</h3>
-                <p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Amplitude articulaire & Activation • {ROUTINES[selectedJoint]?.mobility.length || 0} exercices</p>
-                <p className="text-xs mt-1" style={{ color: '#E8B800' }}>Idéal avant l'entraînement</p>
-              </div>
-            </div>
-          </button>
-          <button
-            onClick={() => startRoutine(`${selectedJoint} — Stretching`, ROUTINES[selectedJoint]?.stretching || [])}
-            className="w-full p-6 rounded-2xl text-left transition-all active:scale-95"
-            style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)' }}
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🧘</span>
-              <div>
-                <h3 className="font-display text-xl text-white uppercase">Stretching</h3>
-                <p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Détente & Récupération • {ROUTINES[selectedJoint]?.stretching.length || 0} exercices</p>
-                <p className="text-xs mt-1" style={{ color: '#60a5fa' }}>Idéal après l'entraînement</p>
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // ── Carte corporelle principale ──
+  const allZones = [
+    ...JOINT_ZONES,
+    ...MUSCLE_ZONES,
+  ];
 
-  // ── MENU PRINCIPAL ───────────────────────────────────────────
+  const renderDots = (zones: BodyZone[]) =>
+    zones.flatMap(zone => {
+      if (zone.bilateral) {
+        return [
+          <BodyDot key={`${zone.id}-L`} zone={zone} side="L" onClick={setSelectedZone} active={selectedZone === zone.id} />,
+          <BodyDot key={`${zone.id}-R`} zone={{ ...zone, x: 100 - zone.x }} side="R" onClick={setSelectedZone} active={selectedZone === zone.id} />,
+        ];
+      }
+      return [<BodyDot key={zone.id} zone={zone} onClick={setSelectedZone} active={selectedZone === zone.id} />];
+    });
+
   return (
-    <div className="px-4 pb-32 pt-2 space-y-5 animate-in fade-in">
-      <div className="py-2">
-        <h2 className="font-display text-2xl text-white uppercase">Soins & Mobilité</h2>
-        <p className="text-xs mt-1" style={{ color: '#8B9BB4' }}>Routines scientifiques adaptées au water-polo</p>
+    <div className="px-6 space-y-4 animate-in fade-in pb-32">
+      {/* Routines rapides */}
+      <div className="grid grid-cols-2 gap-3 mt-2">
+        <GlassCard onClick={() => setActiveGlobalRoutine('PRE_MATCH')} className="p-3 text-center cursor-pointer hover:bg-white/5 flex flex-col items-center justify-center h-20 border-nexus-red/30 relative overflow-hidden">
+          <span className="text-lg mb-1">🔥</span>
+          <span className="font-display font-bold text-white uppercase text-sm leading-none">Pré-Match</span>
+          <span className="text-[9px] text-nexus-gray mt-0.5">15 min</span>
+        </GlassCard>
+        <GlassCard onClick={() => setActiveGlobalRoutine('WARMUP')} className="p-3 text-center cursor-pointer hover:bg-white/5 flex flex-col items-center justify-center h-20 border-nexus-gold/30 relative overflow-hidden">
+          <span className="text-lg mb-1">⚡️</span>
+          <span className="font-display font-bold text-white uppercase text-sm leading-none">Échauffement</span>
+          <span className="text-[9px] text-nexus-gray mt-0.5">15 min · Adapté</span>
+        </GlassCard>
       </div>
 
-      {/* Routines globales */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#E8B800' }}>Routines Complètes</h3>
-        <div className="space-y-3">
-          <button onClick={() => startRoutine('⚡ Activation Pré-Match', PRE_MATCH)} className="w-full p-5 rounded-2xl text-left transition-all active:scale-95" style={{ background: 'linear-gradient(135deg, rgba(232,184,0,0.15), rgba(232,184,0,0.05))', border: '1px solid rgba(232,184,0,0.3)' }}>
-            <div className="flex items-center gap-4">
-              <span className="text-3xl">⚡</span>
-              <div>
-                <h3 className="font-display text-lg text-white uppercase">Activation Pré-Match</h3>
-                <p className="text-xs" style={{ color: '#8B9BB4' }}>Éveiller le corps · Prévenir les blessures · {PRE_MATCH.length} exercices</p>
-                <p className="text-xs font-bold mt-1" style={{ color: '#E8B800' }}>≈ 15-20 minutes</p>
-              </div>
-            </div>
-          </button>
+      {/* Header carte */}
+      <div className="text-center pt-2">
+        <h2 className="font-display text-2xl text-white uppercase tracking-widest">Carte Corporelle</h2>
+        <p className="text-nexus-gray text-[10px] tracking-[0.2em] uppercase">Touche une zone douloureuse</p>
+      </div>
 
-          <button onClick={() => startRoutine('🔄 Récupération Active', RECOVERY)} className="w-full p-5 rounded-2xl text-left transition-all active:scale-95" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05))', border: '1px solid rgba(59,130,246,0.3)' }}>
-            <div className="flex items-center gap-4">
-              <span className="text-3xl">🔄</span>
-              <div>
-                <h3 className="font-display text-lg text-white uppercase">Récupération Active</h3>
-                <p className="text-xs" style={{ color: '#8B9BB4' }}>Après entraînement · Réduire les courbatures · {RECOVERY.length} exercices</p>
-                <p className="text-xs font-bold mt-1" style={{ color: '#60a5fa' }}>≈ 20-25 minutes</p>
-              </div>
-            </div>
-          </button>
+      {/* Légende */}
+      <div className="flex gap-4 justify-center text-[10px] uppercase font-bold tracking-wider">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-nexus-red inline-block" />
+          Articulation
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rotate-45 bg-blue-500 inline-block" />
+          Muscle
+        </span>
+      </div>
+
+      {/* SVG Body Map */}
+      <div className="relative flex justify-center">
+        <div className="relative w-full max-w-[200px] aspect-[1/2.4]">
+          <svg viewBox="0 0 200 470" className="w-full h-full drop-shadow-[0_0_10px_rgba(255,255,255,0.08)]">
+            <g fill="none" stroke="#F4F4F4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {/* Tête */}
+              <ellipse cx="100" cy="28" rx="18" ry="22" />
+              {/* Cou */}
+              <path d="M100 50 L100 57" />
+              {/* Corps */}
+              <path d="
+                M100 57
+                Q130 57 140 65 Q150 70 150 90
+                L152 150 L154 215 L150 225 L146 215
+                L135 150 L125 105 L125 220
+                L135 320 L130 420 L110 420
+                L105 320 L100 250
+                L95 320 L90 420 L70 410
+                L65 320 L75 220
+                L75 105 L65 150 L54 215
+                L50 225 L46 215 L48 150
+                L50 90
+                Q50 70 60 65 Q70 58 100 58
+              " />
+              {/* Pecs */}
+              <path d="M75 98 Q100 108 125 98" strokeOpacity="0.25" />
+              {/* Abs */}
+              <path d="M100 115 L100 170" strokeOpacity="0.15" />
+              {/* Short */}
+              <path d="M77 218 L123 218" strokeOpacity="0.4" />
+            </g>
+          </svg>
+
+          {/* Points articulaires */}
+          {renderDots(JOINT_ZONES)}
+          {/* Zones musculaires */}
+          {renderDots(MUSCLE_ZONES)}
         </div>
       </div>
 
-      {/* Zone ciblée */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#E8B800' }}>Par Zone du Corps</h3>
-        <button onClick={() => setView('JOINT_SELECT')} className="w-full p-5 rounded-2xl text-left transition-all active:scale-95" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <div className="flex items-center gap-4">
-            <span className="text-3xl">🗺️</span>
-            <div>
-              <h3 className="font-display text-lg text-white uppercase">Cibler une Zone</h3>
-              <p className="text-xs" style={{ color: '#8B9BB4' }}>Cou · Épaule · Thorax · Dos · Hanche · Genou · Cheville</p>
-              <div className="flex gap-2 mt-2">
-                <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,184,0,0.15)', color: '#E8B800' }}>Mobilité</span>
-                <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa' }}>Stretching</span>
-              </div>
-            </div>
-            <span className="ml-auto text-xl" style={{ color: '#8B9BB4' }}>→</span>
-          </div>
-        </button>
-      </div>
-
-      {/* Info message staff */}
-      <div className="p-4 rounded-2xl" style={{ background: 'rgba(26,58,122,0.2)', border: '1px solid rgba(232,184,0,0.15)' }}>
-        <p className="text-xs" style={{ color: '#8B9BB4' }}>
-          💡 <strong className="text-white">Conseil :</strong> En cas de douleur persistante, signale-le dans le <strong style={{ color: '#E8B800' }}>Check-in quotidien</strong> ou envoie un message direct au staff depuis l'onglet Profil.
-        </p>
+      {/* Liste scroll des zones */}
+      <div className="pt-2">
+        <p className="text-[10px] text-nexus-gray uppercase font-bold tracking-widest mb-3">Toutes les zones</p>
+        <div className="grid grid-cols-2 gap-2">
+          {[...JOINT_ZONES.filter(z => !z.bilateral || true), ...MUSCLE_ZONES]
+            .filter((z, i, arr) => arr.findIndex(x => x.id === z.id) === i) // dédoublonner
+            .map(zone => (
+              <button
+                key={zone.id}
+                onClick={() => setSelectedZone(zone.id)}
+                className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all text-xs font-bold uppercase tracking-wide ${
+                  zone.type === 'joint'
+                    ? 'border-nexus-red/20 bg-nexus-red/5 text-white hover:bg-nexus-red/15'
+                    : 'border-blue-500/20 bg-blue-500/5 text-white hover:bg-blue-500/15'
+                }`}
+              >
+                <span className={zone.type === 'joint' ? 'text-nexus-red' : 'text-blue-400'}>
+                  {zone.type === 'joint' ? '●' : '◆'}
+                </span>
+                {zone.id}
+              </button>
+            ))}
+        </div>
       </div>
     </div>
   );
