@@ -22,8 +22,9 @@ export const db = {
   getFoods:                  async () => [],
   logMeal:                   async () => {},
   deleteMealLog:             async () => {},
-  submitAttendance:          async () => {},
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   addSessionLog:             async () => {},
+const localDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   assignWorkout:             async () => {},
   completeSession:           async () => {},
   getTeamStats:              async () => ({ gamesPlayed: 0, wins: 0, losses: 0, draws: 0 }),
