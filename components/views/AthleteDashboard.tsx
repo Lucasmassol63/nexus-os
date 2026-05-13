@@ -670,7 +670,7 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
             <svg className="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z" />
             </svg>
-            <span className="text-[9px] font-bold uppercase tracking-widest">Nutri</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest">Nutrition</span>
           </button>
           <button onClick={() => setActiveTab('CARE')}
             className={`flex flex-col items-center p-3 rounded-xl transition-all duration-300 ${activeTab === 'CARE' ? 'text-nexus-gold' : 'text-nexus-gray hover:text-white'}`}>
