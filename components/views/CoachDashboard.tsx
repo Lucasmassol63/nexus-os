@@ -730,54 +730,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
         </div>
       )}
 
-      {/* ══ PLANIFICATION ════════════════════════════════════ */}
+      {/* ══ PLANIFICATION ══════════════════════════════════════════════ */}
       {mainTab === 'PLANIFICATION' && (
-        <div className="px-4 space-y-6 animate-in fade-in pb-8">
-          {!selectedAthlete ? (
-            <>
-              <h3 className="text-xs font-bold uppercase tracking-widest" style={{color:'#8B9BB4'}}>Programmer une séance</h3>
-              {athletes.map(ath => (
-                <div key={ath.id} onClick={() => setSelectedAthlete(ath)} className="p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/5" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)'}}>
-                  <div className="flex items-center gap-3"><span className="text-2xl">{ath.gamification.selectedSkin}</span><span className="text-white font-bold">{ath.firstName} {ath.lastName}</span></div>
-                  <span style={{color:'#8B9BB4'}}>→</span>
-                </div>
-              ))}
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-3">
-                <button onClick={() => { setSelectedAthlete(null); setProgramQueue([]); }} style={{color:'#8B9BB4'}}>←</button>
-                <div><span className="font-display text-xl uppercase block" style={{color:'#E8B800'}}>{selectedAthlete.firstName}</span><span className="text-[10px] uppercase" style={{color:'#8B9BB4'}}>Nouvelle Programmation</span></div>
-              </div>
-              <div className="rounded-2xl p-5" style={{background:'rgba(26,58,122,0.2)',border:'1px solid rgba(232,184,0,0.2)'}}>
-                <h3 className="font-display text-lg text-white uppercase mb-4">Ajouter un exercice</h3>
-                <div className="space-y-3">
-                  <input placeholder="Nom (ex: Back Squat)" className="w-full rounded-xl p-3 text-white outline-none text-sm" style={{background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.1)'}} value={exerciseForm.name||''} onChange={e=>setExerciseForm({...exerciseForm,name:e.target.value})} />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input placeholder="Séries" type="number" className="rounded-xl p-3 text-white outline-none text-sm" style={{background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.1)'}} value={exerciseForm.sets||''} onChange={e=>setExerciseForm({...exerciseForm,sets:parseInt(e.target.value)})} />
-                    <input placeholder="Reps" className="rounded-xl p-3 text-white outline-none text-sm" style={{background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.1)'}} value={exerciseForm.reps||''} onChange={e=>setExerciseForm({...exerciseForm,reps:e.target.value})} />
-                    <input placeholder="Tempo (3010)" className="rounded-xl p-3 text-white outline-none text-sm" style={{background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.1)'}} value={exerciseForm.tempo||''} onChange={e=>setExerciseForm({...exerciseForm,tempo:e.target.value})} />
-                    <input placeholder="Repos (ex: 90s)" className="rounded-xl p-3 text-white outline-none text-sm" style={{background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.1)'}} value={exerciseForm.rest||''} onChange={e=>setExerciseForm({...exerciseForm,rest:e.target.value})} />
-                    <input placeholder="Charge Cible" className="col-span-2 rounded-xl p-3 text-white outline-none text-sm" style={{background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.1)'}} value={exerciseForm.targetLoad||''} onChange={e=>setExerciseForm({...exerciseForm,targetLoad:e.target.value})} />
-                  </div>
-                  <button onClick={addToQueue} disabled={!exerciseForm.name} className="w-full py-3 rounded-xl font-bold uppercase text-sm" style={{background:exerciseForm.name?'rgba(232,184,0,0.2)':'rgba(255,255,255,0.05)',border:exerciseForm.name?'1px solid rgba(232,184,0,0.4)':'1px solid rgba(255,255,255,0.08)',color:exerciseForm.name?'#E8B800':'#8B9BB4'}}>+ Ajouter à la liste</button>
-                </div>
-              </div>
-              {programQueue.length>0 && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-widest" style={{color:'#8B9BB4'}}>Séance ({programQueue.length} exercice{programQueue.length>1?'s':''}) </h4>
-                  {programQueue.map((ex, idx) => (
-                    <div key={idx} className="p-4 rounded-xl flex justify-between items-center" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)'}}>
-                      <div><span className="font-display text-white uppercase block">{ex.name}</span><span className="text-xs font-mono" style={{color:'#E8B800'}}>{ex.sets}x{ex.reps} @ {ex.tempo} • {ex.rest}</span></div>
-                      <button onClick={() => setProgramQueue(programQueue.filter((_,i)=>i!==idx))} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background:'rgba(239,68,68,0.1)',color:'#ef4444'}}>✕</button>
-                    </div>
-                  ))}
-                  <button onClick={sendProgram} className="w-full py-4 rounded-2xl font-display font-bold uppercase tracking-widest" style={{background:'linear-gradient(135deg,#E8B800,#F5D000)',color:'#0B1628'}}>✓ Envoyer à {selectedAthlete.firstName}</button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <PlanningView weeklySchedule={weeklySchedule} />
       )}
 
       {/* ══ MODALS PARTAGÉS ═══════════════════════════════════ */}
