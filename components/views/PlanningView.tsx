@@ -184,8 +184,8 @@ const MacroPlanningTab: React.FC = () => {
   const [movingBlock, setMovingBlock] = useState<MacroBlock | null>(null);
   const [moveOffset, setMoveOffset] = useState(0);
   const isDragging = useRef(false);
-  const CELL = 64;
-  const ROW_H = 44;
+  const CELL = 90;
+  const ROW_H = 52;
 
   useEffect(() => {
     try { const s = localStorage.getItem('nexus_macro_blocks'); if (s) setBlocks(JSON.parse(s)); } catch {}
@@ -259,7 +259,7 @@ const MacroPlanningTab: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-display text-2xl text-nexus-gold uppercase tracking-wider">Planification Macro</h3>
+          <h3 className="font-display text-3xl text-nexus-gold uppercase tracking-wider">Planification Macro</h3>
           <p className="text-[9px] text-nexus-gray mt-0.5">Glissez sur la timeline · Déplacez les blocs existants</p>
         </div>
         <div className="flex gap-2">
@@ -276,7 +276,7 @@ const MacroPlanningTab: React.FC = () => {
         <div style={{ width: `${CELL*52+2}px` }}>
           <div className="flex mb-1">
             {monthGroups.map((mg,i) => (
-              <div key={i} style={{width:`${CELL*mg.count}px`}} className="text-[9px] font-bold uppercase pl-2" style={{color:'#E8B800',borderLeft:'2px solid rgba(232,184,0,0.3)',paddingTop:'2px',paddingBottom:'2px'}}>{mg.m.toUpperCase()}</div>
+              <div key={i} style={{width:`${CELL*mg.count}px`}} style={{fontSize:"12px",fontWeight:"bold",textTransform:"uppercase",color:"#E8B800",borderLeft:"3px solid rgba(232,184,0,0.4)",paddingLeft:"8px",paddingTop:"3px",paddingBottom:"3px"}}>{mg.m.toUpperCase()}</div>
             ))}
           </div>
           <div className="flex h-9">
@@ -284,8 +284,8 @@ const MacroPlanningTab: React.FC = () => {
               const inDrag = w.idx>=dragMin && w.idx<=dragMax;
               const isCurrent = w.idx===currentWeekNum;
               return (
-                <div key={w.idx} style={{width:`${CELL}px`,height:'48px'}}
-                  className={`border-r border-b border-white/5 flex flex-col items-center justify-center text-center transition-colors ${inDrag?'bg-nexus-gold/25':isCurrent?'bg-nexus-gold/10':'bg-white/2 hover:bg-white/6'}`}
+                <div key={w.idx} style={{width:`${CELL}px`,height:'56px'}}
+                  className={`border-r border-b border-white/5 flex flex-col items-center justify-center text-center transition-colors ${inDrag?'bg-nexus-gold/25':isCurrent?'bg-nexus-gold/20 ring-1 ring-nexus-gold/40':'bg-white/2 hover:bg-nexus-gold/8'}`}
                   onMouseDown={() => handleCellDown(w.idx)} onMouseEnter={() => handleCellEnter(w.idx)} onMouseUp={() => handleCellUp(w.idx)}>
                   <span className={`text-[7px] font-bold ${isCurrent?'text-nexus-gold':'text-nexus-gold/60'}`}>{w.label}</span>
                   <span className="text-[5px]" style={{color:'rgba(232,184,0,0.3)'}}>{w.dateStr}</span>
@@ -301,12 +301,12 @@ const MacroPlanningTab: React.FC = () => {
                 <div key={block.id}
                   style={{ left:`${block.startWeek*CELL+2}px`, width:`${(block.endWeek-block.startWeek+1)*CELL-4}px`, top:`${row*ROW_H+2}px`,
                     backgroundColor: block.color+(isMoving?'15':'22'), borderColor: block.color+(isMoving?'55':'99'), opacity: isMoving?0.3:1, cursor: movingBlock?'grabbing':'grab' }}
-                  className="absolute h-9 rounded-lg border flex items-center px-2 group overflow-hidden transition-opacity"
+                  className="absolute h-11 rounded-xl border flex items-center px-3 group overflow-hidden transition-opacity"
                   onMouseDown={ev => { const rect=ev.currentTarget.getBoundingClientRect(); const offset=Math.floor((ev.clientX-rect.left)/CELL); handleBlockDown(ev, block, block.startWeek+offset); }}
                   onClick={ev => { if (!movingBlock) { ev.stopPropagation(); openModal(block.startWeek, block.endWeek, block); } }}>
-                  <div className="w-2 h-2 rounded-full shrink-0 mr-2" style={{backgroundColor:block.color}} />
-                  <span className="text-[10px] font-bold truncate" style={{color:block.color}}>{block.label}</span>
-                  <span className="text-[8px] ml-1.5 shrink-0 font-mono font-bold" style={{color:'#E8B800'}}>S{block.startWeek+1}→S{block.endWeek+1}</span>
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0 mr-2" style={{backgroundColor:block.color}} />
+                  <span className="text-sm font-bold truncate" style={{color:block.color}}>{block.label}</span>
+                  <span className="text-[10px] ml-2 shrink-0 font-mono font-bold" style={{color:'#E8B800'}}>S{block.startWeek+1}→S{block.endWeek+1}</span>
                   <button onClick={ev => { ev.stopPropagation(); setBlocks(bs => bs.filter(b => b.id!==block.id)); }}
                     className="absolute right-1.5 opacity-0 group-hover:opacity-100 text-white/50 hover:text-red-400 text-xs transition-opacity">✕</button>
                 </div>
