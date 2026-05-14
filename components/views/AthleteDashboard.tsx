@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../services/mockDb';
+import { getAthleteWeeklySchedule } from '../../services/scheduleService';
 import { Athlete, WorkoutSession, DailyLog, Match, AttendanceStatus, Appointment, DaySchedule, EventType } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -90,7 +91,7 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
     const loadSchedule = async () => {
       const _d = currentWeekStart;
       const dateStr = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
-      const schedule = await db.getWeeklySchedule(dateStr);
+      const schedule = await getAthleteWeeklySchedule(dateStr, athlete.id);
       setWeekSchedule(schedule);
     };
     loadSchedule();
@@ -103,7 +104,7 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
       const adj = new Date(currentWeekStart.getTime() - offset * 60 * 1000);
       const myDateStr = adj.toISOString().split('T')[0];
       if (!detail?.startDate || detail.startDate === myDateStr) {
-        db.getWeeklySchedule(myDateStr).then(s => setWeekSchedule(s));
+        getAthleteWeeklySchedule(myDateStr, athlete.id).then(s => setWeekSchedule(s));
       }
     };
     window.addEventListener('nexus-schedule-saved', onScheduleSaved);
@@ -116,7 +117,7 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
       const offset = currentWeekStart.getTimezoneOffset();
       const adjusted = new Date(currentWeekStart.getTime() - (offset * 60 * 1000));
       const dateStr = adjusted.toISOString().split('T')[0];
-      db.getWeeklySchedule(dateStr).then(schedule => setWeekSchedule(schedule));
+      getAthleteWeeklySchedule(dateStr, athlete.id).then(schedule => setWeekSchedule(schedule));
     };
     window.addEventListener('schedule-updated', handleScheduleUpdate);
     return () => window.removeEventListener('schedule-updated', handleScheduleUpdate);
