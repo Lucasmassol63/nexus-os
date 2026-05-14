@@ -610,7 +610,7 @@ const PhysiqueTab: React.FC<{ weeklySchedule: DaySchedule[] }> = ({ weeklySchedu
                   <option value="reps">Répétitions</option><option value="meters">Mètres</option><option value="navettes">Aller-retours</option><option value="temps">Temps</option>
                 </select></div>
               <div><label className="text-[9px] text-nexus-gray uppercase font-bold mb-1 block">{exMetric==='reps'?'Reps':exMetric==='meters'?'Distance (m)':exMetric==='navettes'?'Aller-retours':'Durée'}</label>
-                <input type="text" value={exReps} onChange={e => setExReps(e.target.value)} placeholder={exMetric==='reps'?'10':'exMetric==="meters"?'50m':'30s'} className="w-full bg-black/50 border border-white/10 rounded-xl p-2.5 text-white outline-none focus:border-nexus-gold text-sm" /></div>
+                <input type="text" value={exReps} onChange={e => setExReps(e.target.value)} placeholder={exMetric==='reps'?'10':exMetric==='meters'?'50m':'30s'} className="w-full bg-black/50 border border-white/10 rounded-xl p-2.5 text-white outline-none focus:border-nexus-gold text-sm" /></div>
               <div><label className="text-[9px] text-nexus-gray uppercase font-bold mb-1 block">Charge (kg / %RM)</label>
                 <input type="text" value={exLoad} onChange={e => setExLoad(e.target.value)} placeholder="80kg / 70%RM" className="w-full bg-black/50 border border-white/10 rounded-xl p-2.5 text-white outline-none focus:border-nexus-gold text-sm" /></div>
               {exMetric==='reps' && <div><label className="text-[9px] text-nexus-gray uppercase font-bold mb-1 block">Tempo</label>
