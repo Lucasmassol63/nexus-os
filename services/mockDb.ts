@@ -432,55 +432,37 @@ export const db = {
   getFoods: async () => FOOD_DATABASE,
 
   getWeeklySchedule: async (startDateStr: string): Promise<DaySchedule[]> => {
-    // localStorage en priorité absolue (sync coach→joueur, survit au refresh)
+    // PRIORITÉ 1 : localStorage (ce que le coach a sauvegardé)
     try {
-      const ls = typeof localStorage !== 'undefined' && localStorage.getItem('nexus_sched_' + startDateStr);
-      if (ls) { const p = JSON.parse(ls); WEEKLY_SCHEDULE_CACHE[startDateStr] = p; return p; }
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem('nexus_week_' + startDateStr);
+        if (saved) return JSON.parse(saved) as DaySchedule[];
+      }
     } catch {}
-    // localStorage priorité absolue (sync coach→joueur)
-    try {
-      const _lsKey = 'nexus_sched_' + startDateStr;
-      const _lsVal = typeof localStorage !== 'undefined' && localStorage.getItem(_lsKey);
-      if (_lsVal) { const _p = JSON.parse(_lsVal); WEEKLY_SCHEDULE_CACHE[startDateStr] = _p; return _p; }
-    } catch {}
-    if (WEEKLY_SCHEDULE_CACHE[startDateStr]) return WEEKLY_SCHEDULE_CACHE[startDateStr];
-
-    // Parse as local date (avoid UTC timezone bug)
+    // PRIORITÉ 2 : données mock par défaut
     const [yr, mo, dy] = startDateStr.split('-').map(Number);
     const requestedDate = new Date(yr, mo - 1, dy, 0, 0, 0, 0);
-
-    // Get current Monday in local time
     const now = new Date();
     const currentMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const dow = currentMonday.getDay();
     currentMonday.setDate(currentMonday.getDate() - (dow === 0 ? 6 : dow - 1));
-
     const isCurrentWeek = Math.abs(currentMonday.getTime() - requestedDate.getTime()) < 24 * 3600 * 1000;
-
     const weekDays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
     const days: DaySchedule[] = [];
-
     for (let i = 0; i < 7; i++) {
       const d = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate() + i, 0, 0, 0, 0);
-      days.push({
-        dayName: weekDays[i],
-        date: localStr(d),
-        events: isCurrentWeek && MOCK_EVENTS_SOURCE[i] ? [...MOCK_EVENTS_SOURCE[i]] : []
-      });
+      days.push({ dayName: weekDays[i], date: localStr(d), events: isCurrentWeek && MOCK_EVENTS_SOURCE[i] ? [...MOCK_EVENTS_SOURCE[i]] : [] });
     }
-
-    WEEKLY_SCHEDULE_CACHE[startDateStr] = days;
     return days;
   },
 
   updateWeeklySchedule: async (schedule: DaySchedule[]) => {
     if (schedule.length > 0) {
-      const start = schedule[0].date;
-      WEEKLY_SCHEDULE_CACHE[start] = schedule;
+      const startDate = schedule[0].date;
       try {
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('nexus_sched_' + start, JSON.stringify(schedule));
-          window.dispatchEvent(new CustomEvent('schedule-updated', { detail: { start } }));
+          localStorage.setItem('nexus_week_' + startDate, JSON.stringify(schedule));
+          window.dispatchEvent(new CustomEvent('nexus-schedule-saved', { detail: { startDate } }));
         }
       } catch {}
     }

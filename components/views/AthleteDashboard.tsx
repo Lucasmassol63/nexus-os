@@ -95,6 +95,20 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
     };
     loadSchedule();
   }, [currentWeekStart]);
+  // Sync planning : écouter les mises à jour du coach
+  React.useEffect(() => {
+    const onScheduleSaved = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const offset = currentWeekStart.getTimezoneOffset();
+      const adj = new Date(currentWeekStart.getTime() - offset * 60 * 1000);
+      const myDateStr = adj.toISOString().split('T')[0];
+      if (!detail?.startDate || detail.startDate === myDateStr) {
+        db.getWeeklySchedule(myDateStr).then(s => setWeekSchedule(s));
+      }
+    };
+    window.addEventListener('nexus-schedule-saved', onScheduleSaved);
+    return () => window.removeEventListener('nexus-schedule-saved', onScheduleSaved);
+  }, [currentWeekStart]);
 
   // Re-sync when coach updates the schedule
   React.useEffect(() => {
