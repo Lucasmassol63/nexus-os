@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../lib/supabase';
 import { getAthletes, addObjective, updateObjectiveStatus } from '../../services/athleteService';
 import {
   getWeeklySchedule, addEvent, deleteEvent, getWeekEventAthletes, setEventAthletes,
@@ -110,6 +111,27 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Rafraîchissement automatique toutes les 30s (check-ins, RPE, messages)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const data = await getAthletes();
+      setAthletes(data);
+      const count = await getPendingAppointmentsCount();
+      setPendingCount(count);
+    }, 30000);
+    // Realtime Supabase sur daily_logs
+    const sub = supabase
+      .channel('coach-refresh')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_logs' }, async () => {
+        const data = await getAthletes(); setAthletes(data);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'monitoring_history' }, async () => {
+        const data = await getAthletes(); setAthletes(data);
+      })
+      .subscribe();
+    return () => { clearInterval(interval); supabase.removeChannel(sub); };
+  }, []);
   useEffect(() => { loadSchedule(); }, [loadSchedule]);
   useEffect(() => { if (mainTab==='PLANNING' && planningTab==='RDV') loadAppointments(); }, [mainTab, planningTab]);
 
