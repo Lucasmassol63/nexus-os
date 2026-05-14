@@ -432,6 +432,11 @@ export const db = {
   getFoods: async () => FOOD_DATABASE,
 
   getWeeklySchedule: async (startDateStr: string): Promise<DaySchedule[]> => {
+    // localStorage en priorité absolue (sync coach→joueur, survit au refresh)
+    try {
+      const ls = typeof localStorage !== 'undefined' && localStorage.getItem('nexus_sched_' + startDateStr);
+      if (ls) { const p = JSON.parse(ls); WEEKLY_SCHEDULE_CACHE[startDateStr] = p; return p; }
+    } catch {}
     if (WEEKLY_SCHEDULE_CACHE[startDateStr]) return WEEKLY_SCHEDULE_CACHE[startDateStr];
 
     // Parse as local date (avoid UTC timezone bug)
@@ -463,7 +468,16 @@ export const db = {
   },
 
   updateWeeklySchedule: async (schedule: DaySchedule[]) => {
-    if (schedule.length > 0) WEEKLY_SCHEDULE_CACHE[schedule[0].date] = schedule;
+    if (schedule.length > 0) {
+      const start = schedule[0].date;
+      WEEKLY_SCHEDULE_CACHE[start] = schedule;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('nexus_sched_' + start, JSON.stringify(schedule));
+          window.dispatchEvent(new CustomEvent('schedule-updated', { detail: { start } }));
+        }
+      } catch {}
+    }
     return true;
   },
 
