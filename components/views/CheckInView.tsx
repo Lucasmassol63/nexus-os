@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../services/mockDb';
+import { getAthleteWeeklySchedule } from '../../services/scheduleService';
 import { Athlete, DailyLog, DaySchedule, EventType, ScheduleEvent } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -131,7 +132,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({ athlete, onComplete })
 
       console.log('[CheckIn] weekStart:', weekStart, '| today:', todayStr);
 
-      const schedule: DaySchedule[] = await db.getWeeklySchedule(weekStart);
+      const schedule: DaySchedule[] = await getAthleteWeeklySchedule(weekStart, athlete.id);
       console.log('[CheckIn] schedule days:', schedule.map(d => d.date));
 
       const todaySchedule = schedule.find(d => d.date === todayStr);
