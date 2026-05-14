@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getStaffInbox, markMessageRead, StaffInboxItem } from '../../services/scheduleService';
 import { getAthletes, addObjective, updateObjectiveStatus } from '../../services/athleteService';
 import {
   getWeeklySchedule, addEvent, deleteEvent, getWeekEventAthletes, setEventAthletes,
@@ -7,7 +8,6 @@ import {
   submitAttendance, assignWorkout,
   getAllAppointments, getPendingAppointmentsCount, addAppointment, deleteAppointment,
   confirmAppointment, declineAppointment,
-  getStaffInbox, markMessageRead, StaffInboxItem,
 } from '../../services/scheduleService';
 import { Athlete, Exercise, Match, DaySchedule, AttendanceStatus, ScheduleEvent, EventType, Appointment } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
@@ -55,11 +55,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
 
   const [athletes, setAthletes]       = useState<Athlete[]>([]);
   const [inbox, setInbox]             = useState<StaffInboxItem[]>([]);
-  const enrichedInbox = inbox.map(item => {
-    const ath = athletes.find(a => a.id === item.athleteId);
-    const name = ath ? `${ath.firstName} ${ath.lastName}` : item.athleteName;
-    return { ...item, athleteName: name };
-  });
+  const enrichedInbox = React.useMemo(() => inbox.map(item => { const a = athletes.find(x => x.id === item.athleteId); return { ...item, athleteName: a ? a.firstName + ' ' + a.lastName : item.athleteName }; }), [inbox, athletes]);
   const [nextMatch, setNextMatch]     = useState<Match | null>(null);
   const [allMatches, setAllMatches]   = useState<Match[]>([]);
   const [weeklySchedule, setWeeklySchedule] = useState<DaySchedule[]>([]);
@@ -101,8 +97,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
     const [ath, match, matches, count, inboxData] = await Promise.all([
       getAthletes(), getNextMatch(), getAllMatches(), getPendingAppointmentsCount(), getStaffInbox(),
     ]);
-    setAthletes(ath); setNextMatch(match); setAllMatches(matches); setPendingCount(count);
-    setInbox(inboxData ?? []);
+    setAthletes(ath); setNextMatch(match); setAllMatches(matches); setPendingCount(count); setInbox(inboxData ?? []);
   }, []);
 
   const loadSchedule = useCallback(async () => {
@@ -127,19 +122,16 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
       setAthletes(data);
       const count = await getPendingAppointmentsCount();
       setPendingCount(count);
+      getStaffInbox().then(setInbox);
     }, 30000);
     // Realtime Supabase sur daily_logs
     const sub = supabase
       .channel('coach-refresh')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_logs' }, async () => {
         const data = await getAthletes(); setAthletes(data);
-        getStaffInbox().then(setInbox);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'monitoring_history' }, async () => {
         const data = await getAthletes(); setAthletes(data);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async () => {
-        getStaffInbox().then(setInbox);
       })
       .subscribe();
     return () => { clearInterval(interval); supabase.removeChannel(sub); };
@@ -310,50 +302,135 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
             </div>
           </GlassCard>
 
-                    {/* ── BOÎTE DE RÉCEPTION ── */}
+          {/* ── INBOX COACH ── */}
           {enrichedInbox.length > 0 && (
-            <div style={{border:'2px solid rgba(249,115,22,0.5)',borderRadius:'16px',overflow:'hidden',background:'rgba(249,115,22,0.04)'}}>
-              {/* Header */}
-              <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div style={{border:'2px solid rgba(249,115,22,0.55)',borderRadius:'16px',overflow:'hidden',background:'rgba(249,115,22,0.04)'}}>
+              <div style={{padding:'10px 16px',borderBottom:'1px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
                   <span>🔔</span>
                   <span style={{fontSize:'11px',fontWeight:'bold',textTransform:'uppercase',letterSpacing:'0.1em',color:'#f97316'}}>Messages & Alertes joueurs</span>
                 </div>
-                <span style={{background:'#f97316',color:'white',borderRadius:'999px',padding:'2px 8px',fontSize:'11px',fontWeight:'bold'}}>{enrichedInbox.length}</span>
+                <span style={{background:'#f97316',color:'white',borderRadius:'999px',padding:'1px 8px',fontSize:'11px',fontWeight:'bold'}}>{enrichedInbox.length}</span>
               </div>
-              {/* Liste */}
-              <div style={{maxHeight:'260px',overflowY:'auto'}}>
+              <div style={{maxHeight:'240px',overflowY:'auto'}}>
                 {enrichedInbox.map((item, idx) => (
-                  <div key={item.id} style={{padding:'12px 16px',borderBottom:idx < enrichedInbox.length-1 ? '1px solid rgba(255,255,255,0.05)' : 'none',display:'flex',gap:'12px',alignItems:'flex-start'}}>
-                    {/* Icône type */}
-                    <div style={{width:'32px',height:'32px',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'14px',
+                  <div key={item.id} style={{padding:'10px 16px',borderBottom:idx<enrichedInbox.length-1?'1px solid rgba(255,255,255,0.05)':'none',display:'flex',gap:'12px',alignItems:'flex-start'}}>
+                    <div style={{width:'30px',height:'30px',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'13px',
                       background:item.type==='message'?'rgba(59,130,246,0.15)':'rgba(249,115,22,0.15)'}}>
-                      {item.type==='message' ? '✉️' : '⚠️'}
+                      {item.type==='message'?'✉️':'⚠️'}
                     </div>
-                    {/* Contenu */}
                     <div style={{flex:1,minWidth:0}}>
-                      {/* Ligne 1: nom + date */}
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px',marginBottom:'2px'}}>
-                        <span style={{color:'white',fontWeight:'bold',fontSize:'13px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.athleteName}</span>
+                        <span style={{color:'white',fontWeight:'bold',fontSize:'13px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.athleteName}</span>
                         <span style={{fontSize:'10px',color:'#8B9BB4',flexShrink:0}}>{item.date}</span>
                       </div>
-                      {/* Ligne 2: badge type + contenu */}
                       <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}}>
                         <span style={{fontSize:'9px',fontWeight:'bold',textTransform:'uppercase',padding:'1px 6px',borderRadius:'4px',
                           background:item.type==='message'?'rgba(59,130,246,0.2)':'rgba(249,115,22,0.2)',
                           color:item.type==='message'?'#93c5fd':'#fdba74'}}>
-                          {item.type==='message' ? 'Message' : 'Alerte Check-in'}
+                          {item.type==='message'?'Message':'Alerte Check-in'}
                         </span>
-                        <span style={{fontSize:'12px',color:'#cbd5e1',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.content}</span>
+                        <span style={{fontSize:'12px',color:'#cbd5e1',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.content}</span>
                       </div>
-                      {/* Ligne 3: détail si présent */}
-                      {item.detail && <p style={{fontSize:'11px',color:'rgba(139,155,180,0.7)',marginTop:'2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.detail}</p>}
+                      {item.detail && <p style={{fontSize:'11px',color:'rgba(139,155,180,0.65)',marginTop:'2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.detail}</p>}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          )}; });
+          )}
+
+          <GlassCard onClick={() => { setMainTab('PLANNING'); setPlanningTab('MATCHS'); }} className="p-0 overflow-hidden cursor-pointer hover:brightness-110 transition-all border-yellow-500/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-black/80"></div>
+            <div className="relative z-10 p-5">
+              {nextMatch ? (
+                <>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{color:'#8B9BB4'}}>PROCHAIN MATCH</p>
+                      <h3 className="font-display text-2xl text-white uppercase italic">VS {nextMatch.opponent}</h3>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-display text-4xl" style={{color:'#E8B800'}}>J-{Math.ceil((new Date(nextMatch.date).getTime()-new Date().getTime())/(1000*3600*24))}</span>
+                      <p className="text-[10px] mt-0.5" style={{color:'rgba(232,184,0,0.6)'}}>Gérer →</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm border-t border-white/10 pt-3">
+                    <span style={{color:'#8B9BB4'}}>{new Date(nextMatch.date).toLocaleDateString()}</span>
+                    <span style={{color:'#E8B800'}}>•</span>
+                    <span className="text-white">{nextMatch.time}</span>
+                    {nextMatch.location && <><span style={{color:'#E8B800'}}>•</span><span className="text-xs" style={{color:'#8B9BB4'}}>{nextMatch.location}</span></>}
+                    <span className={`ml-auto px-2 py-0.5 rounded text-xs font-bold uppercase ${nextMatch.isHome?'bg-white/10 text-white':'bg-red-500/20 text-red-400'}`}>{nextMatch.isHome?'DOM':'EXT'}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-3">
+                  <p className="text-sm" style={{color:'#8B9BB4'}}>Aucun match programmé</p>
+                  <p className="text-xs mt-1" style={{color:'#E8B800'}}>+ Ajouter →</p>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+
+          {alerts.length > 0 && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{color:'#ef4444'}}>⚠️ Alertes Joueurs</h3>
+              <div className="space-y-2">
+                {alerts.map((a, i) => (
+                  <div key={i} onClick={() => setProfileAthlete(a.athlete)}
+                    className="p-3 rounded-xl flex justify-between items-center cursor-pointer" style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)'}}>
+                    <span className="text-white font-bold text-sm">{a.athlete.firstName} {a.athlete.lastName}</span>
+                    <span className="text-[10px] px-2 py-1 rounded font-bold uppercase" style={{background:'#ef4444',color:'white'}}>{a.reason}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── APERÇU SEMAINE — RPE toujours lisible ── */}
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest" style={{color:'#8B9BB4'}}>Aperçu Semaine</h3>
+              <WeekNav />
+            </div>
+            <div className="overflow-x-auto pb-2">
+              <div className="flex gap-2 min-w-[500px]">
+                {weeklySchedule.map((day, dIdx) => (
+                  <div key={dIdx} className="flex-1 min-w-[65px]">
+                    <div className="text-center mb-1 cursor-pointer rounded-lg p-1 hover:bg-white/5"
+                      onClick={() => { setPlanningDayIdx(dIdx); setMainTab('PLANNING'); setPlanningTab('SEMAINIER'); }}>
+                      <div className="text-[9px] font-bold uppercase" style={{color:'#8B9BB4'}}>{day.dayName.substring(0,3)}</div>
+                      <div className="text-xs font-bold text-white">{day.date.split('-')[2]}</div>
+                    </div>
+                    <div className="space-y-1 min-h-[50px]">
+                      {day.events.length === 0 && <div className="border border-white/5 rounded-lg min-h-[36px]"></div>}
+                      {day.events.map((ev, eIdx) => (
+                        <div key={eIdx} onClick={() => { setPlanningDayIdx(dIdx); setMainTab('PLANNING'); setPlanningTab('SEMAINIER'); }}
+                          className={`rounded-lg p-1.5 text-[8px] leading-tight cursor-pointer hover:brightness-125 ${evColor(ev.type)} text-white`}>
+                          <div className="font-bold">{ev.startTime}</div>
+                          <div className="truncate">{ev.title||ev.type}</div>
+                          {/* ── RPE toujours lisible : fond sombre ── */}
+                          <div className="mt-0.5 px-1 rounded text-[7px] font-bold text-white inline-block"
+                            style={{background:'rgba(0,0,0,0.55)'}}>
+                            RPE {ev.intensity}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── CARTES PRÉSENCE CLIQUABLES ── */}
+          <div className="grid grid-cols-2 gap-3 pb-4">
+            {[
+              {label:'Water-Polo', type:'WATER' as const, color:'#3b82f6'},
+              {label:'Musculation', type:'DRY'  as const, color:'#ef4444'},
+            ].map(s => {
+              let total=0, present=0;
+              athletes.forEach(a => { const h = s.type==='WATER'?a.monitoring.waterHistory:a.monitoring.dryHistory; h.slice(-7).forEach(d => { total++; if(d.attendance==='PRESENT') present++; }); });
               const pct = total>0?Math.round((present/total)*100):0;
               return (
                 <div key={s.type} onClick={() => setPresenceDetail(s.type)}
