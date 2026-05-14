@@ -305,6 +305,38 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
             </div>
           </GlassCard>
 
+          {/* ── BOÎTE DE RÉCEPTION : messages + alertes check-in ── */}
+          {inbox.length > 0 && (
+            <div className="rounded-2xl border-2 overflow-hidden" style={{borderColor:'rgba(249,115,22,0.6)',background:'rgba(249,115,22,0.05)'}}>
+              <div className="px-4 py-3 border-b flex items-center justify-between" style={{borderColor:'rgba(249,115,22,0.2)'}}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🔔</span>
+                  <span className="text-xs font-bold uppercase tracking-widest" style={{color:'#f97316'}}>Messages & Alertes</span>
+                </div>
+                <span className="text-[10px] text-white font-bold rounded-full px-2 py-0.5" style={{background:'#f97316'}}>{inbox.length}</span>
+              </div>
+              <div className="divide-y max-h-64 overflow-y-auto" style={{borderColor:'rgba(249,115,22,0.1)'}}>
+                {inbox.map(item => (
+                  <div key={item.id} className="px-4 py-3 flex items-start gap-3 hover:bg-white/5 transition-colors">
+                    <div className="mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
+                      style={{background:item.type==='message'?'rgba(59,130,246,0.2)':'rgba(249,115,22,0.2)',
+                              color:item.type==='message'?'#60a5fa':'#fb923c'}}>
+                      {item.type==='message'?'✉':'⚠'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-white font-bold text-sm truncate">{item.athleteName}</span>
+                        <span className="text-[9px] shrink-0" style={{color:'#8B9BB4'}}>{item.date}</span>
+                      </div>
+                      <p className="text-xs mt-0.5 truncate" style={{color:'#8B9BB4'}}>{item.content}</p>
+                      {item.detail && <p className="text-[10px] mt-0.5 truncate" style={{color:'rgba(139,155,180,0.5)'}}>{item.detail}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <GlassCard onClick={() => { setMainTab('PLANNING'); setPlanningTab('MATCHS'); }} className="p-0 overflow-hidden cursor-pointer hover:brightness-110 transition-all border-yellow-500/30">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-black/80"></div>
             <div className="relative z-10 p-5">
