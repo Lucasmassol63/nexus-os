@@ -437,6 +437,12 @@ export const db = {
       const ls = typeof localStorage !== 'undefined' && localStorage.getItem('nexus_sched_' + startDateStr);
       if (ls) { const p = JSON.parse(ls); WEEKLY_SCHEDULE_CACHE[startDateStr] = p; return p; }
     } catch {}
+    // localStorage priorité absolue (sync coach→joueur)
+    try {
+      const _lsKey = 'nexus_sched_' + startDateStr;
+      const _lsVal = typeof localStorage !== 'undefined' && localStorage.getItem(_lsKey);
+      if (_lsVal) { const _p = JSON.parse(_lsVal); WEEKLY_SCHEDULE_CACHE[startDateStr] = _p; return _p; }
+    } catch {}
     if (WEEKLY_SCHEDULE_CACHE[startDateStr]) return WEEKLY_SCHEDULE_CACHE[startDateStr];
 
     // Parse as local date (avoid UTC timezone bug)
