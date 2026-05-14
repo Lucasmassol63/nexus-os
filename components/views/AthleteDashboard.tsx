@@ -96,6 +96,18 @@ export const AthleteDashboard: React.FC<AthleteDashboardProps> = ({ athlete, onL
     loadSchedule();
   }, [currentWeekStart]);
 
+  // Re-sync when coach updates the schedule
+  React.useEffect(() => {
+    const handleScheduleUpdate = () => {
+      const offset = currentWeekStart.getTimezoneOffset();
+      const adjusted = new Date(currentWeekStart.getTime() - (offset * 60 * 1000));
+      const dateStr = adjusted.toISOString().split('T')[0];
+      db.getWeeklySchedule(dateStr).then(schedule => setWeekSchedule(schedule));
+    };
+    window.addEventListener('schedule-updated', handleScheduleUpdate);
+    return () => window.removeEventListener('schedule-updated', handleScheduleUpdate);
+  }, [currentWeekStart]);
+
   const handlePrevWeek = () => { const d = new Date(currentWeekStart); d.setDate(d.getDate() - 7); setCurrentWeekStart(d); };
   const handleNextWeek = () => { const d = new Date(currentWeekStart); d.setDate(d.getDate() + 7); setCurrentWeekStart(d); };
 
