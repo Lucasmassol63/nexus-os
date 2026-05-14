@@ -306,63 +306,62 @@ export interface StaffInboxItem {
 }
 
 export async function getStaffInbox(): Promise<StaffInboxItem[]> {
-  const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
   const items: StaffInboxItem[] = [];
 
-  // 1. Messages des joueurs
-  const { data: messages } = await supabase
-    .from('messages')
-    .select('*, athletes(first_name, last_name)')
-    .gte('created_at', weekAgo + 'T00:00:00')
-    .order('created_at', { ascending: false })
-    .limit(20);
+  try {
+    // 1. Messages des joueurs (sans jointure)
+    const { data: messages } = await supabase
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
 
-  for (const m of messages ?? []) {
-    const name = m.athletes ? `${m.athletes.first_name} ${m.athletes.last_name}` : 'Joueur';
-    items.push({
-      id: m.id,
-      type: 'message',
-      athleteId: m.athlete_id,
-      athleteName: name,
-      content: m.subject ?? 'Message',
-      detail: m.body,
-      date: (m.created_at ?? today).split('T')[0],
-      read: m.read ?? false,
-    });
-  }
-
-  // 2. Alertes check-in (wellness critique)
-  const { data: logs } = await supabase
-    .from('daily_logs')
-    .select('*, athletes(first_name, last_name)')
-    .gte('date', weekAgo)
-    .order('date', { ascending: false })
-    .limit(50);
-
-  for (const log of logs ?? []) {
-    const name = log.athletes ? `${log.athletes.first_name} ${log.athletes.last_name}` : 'Joueur';
-    const alerts: string[] = [];
-    if (log.sleep    != null && log.sleep    < 5)  alerts.push(`Sommeil faible (${log.sleep}/10)`);
-    if (log.soreness != null && log.soreness < 4)  alerts.push(`Douleurs élevées (${log.soreness}/10)`);
-    if (log.mood     != null && log.mood     < 4)  alerts.push(`Moral bas (${log.mood}/10)`);
-    if (log.fatigue  != null && log.fatigue  > 7)  alerts.push(`Fatigue élevée (${log.fatigue}/10)`);
-    if (log.comment  && log.comment.trim())         alerts.push(`Message : "${log.comment}"`);
-    if (alerts.length > 0) {
+    for (const m of messages ?? []) {
       items.push({
-        id: `checkin_${log.id}`,
-        type: 'checkin_alert',
-        athleteId: log.athlete_id,
-        athleteName: name,
-        content: alerts[0],
-        detail: alerts.slice(1).join(' · ') || undefined,
-        date: log.date,
-        read: false,
+        id: m.id,
+        type: 'message',
+        athleteId: m.athlete_id ?? '',
+        athleteName: m.athlete_name ?? m.athlete_id ?? 'Joueur',
+        content: m.subject ?? m.title ?? 'Message',
+        detail: m.body ?? m.content ?? '',
+        date: (m.created_at ?? m.date ?? '').split('T')[0],
+        read: m.read ?? false,
       });
     }
-  }
+  } catch {}
 
-  // Trier par date décroissante
+  try {
+    // 2. Alertes check-in depuis daily_logs (sans jointure)
+    const { data: logs } = await supabase
+      .from('daily_logs')
+      .select('*')
+      .gte('date', weekAgo)
+      .order('date', { ascending: false })
+      .limit(50);
+
+    for (const log of logs ?? []) {
+      const alerts: string[] = [];
+      if (log.sleep     != null && log.sleep    < 5)  alerts.push(`Sommeil ${log.sleep}/10`);
+      if (log.soreness  != null && log.soreness < 4)  alerts.push(`Douleurs ${log.soreness}/10`);
+      if (log.mood      != null && log.mood     < 4)  alerts.push(`Moral ${log.mood}/10`);
+      if (log.fatigue   != null && log.fatigue  > 7)  alerts.push(`Fatigue ${log.fatigue}/10`);
+      if (log.comment   && log.comment.trim())         alerts.push(`"${log.comment}"`);
+      if (alerts.length > 0) {
+        items.push({
+          id: \`ci_\${log.id ?? log.athlete_id}_\${log.date}\`,
+          type: 'checkin_alert',
+          athleteId: log.athlete_id ?? '',
+          athleteName: log.athlete_name ?? log.athlete_id ?? 'Joueur',
+          content: alerts[0],
+          detail: alerts.slice(1).join(' · ') || undefined,
+          date: log.date ?? '',
+          read: false,
+        });
+      }
+    }
+  } catch {}
+
   items.sort((a, b) => b.date.localeCompare(a.date));
   return items;
 }

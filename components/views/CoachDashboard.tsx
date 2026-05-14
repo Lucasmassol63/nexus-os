@@ -93,11 +93,11 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
 
   // ─── LOAD ──────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
-    const [ath, match, matches, count] = await Promise.all([
+    const [ath, match, matches, count, inboxData] = await Promise.all([
       getAthletes(), getNextMatch(), getAllMatches(), getPendingAppointmentsCount(), getStaffInbox(),
     ]);
     setAthletes(ath); setNextMatch(match); setAllMatches(matches); setPendingCount(count);
-      if (Array.isArray(results?.[4])) setInbox(results[4] as StaffInboxItem[]);
+    setInbox(inboxData ?? []);
   }, []);
 
   const loadSchedule = useCallback(async () => {
