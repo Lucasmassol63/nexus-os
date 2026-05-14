@@ -293,3 +293,80 @@ export async function sendMessage(athleteId: string, subject: string, body: stri
   const { error } = await supabase.from('messages').insert({ athlete_id: athleteId, subject, body });
   if (error) throw error;
 }
+// ─── BOÎTE DE RÉCEPTION COACH ────────────────────────────────
+export interface StaffInboxItem {
+  id: string;
+  type: 'message' | 'checkin_alert';
+  athleteId: string;
+  athleteName: string;
+  content: string;
+  detail?: string;
+  date: string;
+  read: boolean;
+}
+
+export async function getStaffInbox(): Promise<StaffInboxItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
+  const items: StaffInboxItem[] = [];
+
+  // 1. Messages des joueurs
+  const { data: messages } = await supabase
+    .from('messages')
+    .select('*, athletes(first_name, last_name)')
+    .gte('created_at', weekAgo + 'T00:00:00')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  for (const m of messages ?? []) {
+    const name = m.athletes ? `${m.athletes.first_name} ${m.athletes.last_name}` : 'Joueur';
+    items.push({
+      id: m.id,
+      type: 'message',
+      athleteId: m.athlete_id,
+      athleteName: name,
+      content: m.subject ?? 'Message',
+      detail: m.body,
+      date: (m.created_at ?? today).split('T')[0],
+      read: m.read ?? false,
+    });
+  }
+
+  // 2. Alertes check-in (wellness critique)
+  const { data: logs } = await supabase
+    .from('daily_logs')
+    .select('*, athletes(first_name, last_name)')
+    .gte('date', weekAgo)
+    .order('date', { ascending: false })
+    .limit(50);
+
+  for (const log of logs ?? []) {
+    const name = log.athletes ? `${log.athletes.first_name} ${log.athletes.last_name}` : 'Joueur';
+    const alerts: string[] = [];
+    if (log.sleep    != null && log.sleep    < 5)  alerts.push(`Sommeil faible (${log.sleep}/10)`);
+    if (log.soreness != null && log.soreness < 4)  alerts.push(`Douleurs élevées (${log.soreness}/10)`);
+    if (log.mood     != null && log.mood     < 4)  alerts.push(`Moral bas (${log.mood}/10)`);
+    if (log.fatigue  != null && log.fatigue  > 7)  alerts.push(`Fatigue élevée (${log.fatigue}/10)`);
+    if (log.comment  && log.comment.trim())         alerts.push(`Message : "${log.comment}"`);
+    if (alerts.length > 0) {
+      items.push({
+        id: `checkin_${log.id}`,
+        type: 'checkin_alert',
+        athleteId: log.athlete_id,
+        athleteName: name,
+        content: alerts[0],
+        detail: alerts.slice(1).join(' · ') || undefined,
+        date: log.date,
+        read: false,
+      });
+    }
+  }
+
+  // Trier par date décroissante
+  items.sort((a, b) => b.date.localeCompare(a.date));
+  return items;
+}
+
+export async function markMessageRead(messageId: string) {
+  await supabase.from('messages').update({ read: true }).eq('id', messageId);
+}

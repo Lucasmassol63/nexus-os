@@ -7,6 +7,7 @@ import {
   submitAttendance, assignWorkout,
   getAllAppointments, getPendingAppointmentsCount, addAppointment, deleteAppointment,
   confirmAppointment, declineAppointment,
+  getStaffInbox, markMessageRead, StaffInboxItem,
 } from '../../services/scheduleService';
 import { Athlete, Exercise, Match, DaySchedule, AttendanceStatus, ScheduleEvent, EventType, Appointment } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
@@ -53,6 +54,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
   const [planningTab, setPlanningTab] = useState<PlanningTab>('SEMAINIER');
 
   const [athletes, setAthletes]       = useState<Athlete[]>([]);
+  const [inbox, setInbox]             = useState<StaffInboxItem[]>([]);
   const [nextMatch, setNextMatch]     = useState<Match | null>(null);
   const [allMatches, setAllMatches]   = useState<Match[]>([]);
   const [weeklySchedule, setWeeklySchedule] = useState<DaySchedule[]>([]);
@@ -92,9 +94,10 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
   // ─── LOAD ──────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
     const [ath, match, matches, count] = await Promise.all([
-      getAthletes(), getNextMatch(), getAllMatches(), getPendingAppointmentsCount(),
+      getAthletes(), getNextMatch(), getAllMatches(), getPendingAppointmentsCount(), getStaffInbox(),
     ]);
     setAthletes(ath); setNextMatch(match); setAllMatches(matches); setPendingCount(count);
+      if (Array.isArray(results?.[4])) setInbox(results[4] as StaffInboxItem[]);
   }, []);
 
   const loadSchedule = useCallback(async () => {
@@ -125,9 +128,13 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({ onLogout }) => {
       .channel('coach-refresh')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_logs' }, async () => {
         const data = await getAthletes(); setAthletes(data);
+        getStaffInbox().then(setInbox);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'monitoring_history' }, async () => {
         const data = await getAthletes(); setAthletes(data);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async () => {
+        getStaffInbox().then(setInbox);
       })
       .subscribe();
     return () => { clearInterval(interval); supabase.removeChannel(sub); };
