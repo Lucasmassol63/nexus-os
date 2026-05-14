@@ -274,9 +274,9 @@ const MacroPlanningTab: React.FC = () => {
         onMouseLeave={handleLeave}
         onMouseUp={() => { if (movingBlock) { setMovingBlock(null); setDragStart(null); setDragCurrent(null); } }}>
         <div style={{ width: `${CELL*52+2}px` }}>
-          <div className="flex mb-1">
+          <div style={{display:"flex",borderBottom:"1px solid rgba(232,184,0,0.15)"}}>
             {monthGroups.map((mg,i) => (
-              <div key={i} style={{width:`${CELL*mg.count}px`}} style={{fontSize:"12px",fontWeight:"bold",textTransform:"uppercase",color:"#E8B800",borderLeft:"3px solid rgba(232,184,0,0.4)",paddingLeft:"8px",paddingTop:"3px",paddingBottom:"3px"}}>{mg.m.toUpperCase()}</div>
+              <div key={i} style={{width:`${CELL*mg.count}px`,flexShrink:0,fontSize:"13px",fontWeight:"bold",textTransform:"uppercase",color:"#E8B800",borderLeft:"2px solid rgba(232,184,0,0.35)",paddingLeft:"10px",display:"flex",alignItems:"center",height:"30px",background:"rgba(232,184,0,0.04)"}}>{mg.m.toUpperCase()}</div>
             ))}
           </div>
           <div className="flex h-9">
@@ -285,10 +285,10 @@ const MacroPlanningTab: React.FC = () => {
               const isCurrent = w.idx===currentWeekNum;
               return (
                 <div key={w.idx} style={{width:`${CELL}px`,height:'56px'}}
-                  className={`border-r border-b border-white/5 flex flex-col items-center justify-center text-center transition-colors ${inDrag?'bg-nexus-gold/25':isCurrent?'bg-nexus-gold/20 ring-1 ring-nexus-gold/40':'bg-white/2 hover:bg-nexus-gold/8'}`}
+                  className={`border-r border-white/5 flex flex-col items-center justify-center text-center transition-colors ${inDrag?'bg-nexus-gold/25':isCurrent?'bg-nexus-gold/18 ring-1 ring-nexus-gold/40':'bg-white/2 hover:bg-nexus-gold/8'}`}
                   onMouseDown={() => handleCellDown(w.idx)} onMouseEnter={() => handleCellEnter(w.idx)} onMouseUp={() => handleCellUp(w.idx)}>
-                  <span className={`text-[7px] font-bold ${isCurrent?'text-nexus-gold':'text-nexus-gold/60'}`}>{w.label}</span>
-                  <span className="text-[5px]" style={{color:'rgba(232,184,0,0.3)'}}>{w.dateStr}</span>
+                  <span style={{fontSize:"14px",fontWeight:"bold",color:isCurrent?"#E8B800":"rgba(232,184,0,0.65)",lineHeight:1}}>{w.label}</span>
+                  <span style={{fontSize:"10px",color:isCurrent?"rgba(232,184,0,0.8)":"rgba(232,184,0,0.45)",marginTop:"3px"}}>{w.dateStr}</span>
                 </div>
               );
             })}
