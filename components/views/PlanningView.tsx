@@ -184,7 +184,7 @@ const MacroPlanningTab: React.FC = () => {
   const [movingBlock, setMovingBlock] = useState<MacroBlock | null>(null);
   const [moveOffset, setMoveOffset] = useState(0);
   const isDragging = useRef(false);
-  const CELL = 52;
+  const CELL = 64;
   const ROW_H = 44;
 
   useEffect(() => {
@@ -259,7 +259,7 @@ const MacroPlanningTab: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-display text-lg text-nexus-gold uppercase tracking-wider">Planification Macro</h3>
+          <h3 className="font-display text-2xl text-nexus-gold uppercase tracking-wider">Planification Macro</h3>
           <p className="text-[9px] text-nexus-gray mt-0.5">Glissez sur la timeline · Déplacez les blocs existants</p>
         </div>
         <div className="flex gap-2">
@@ -270,13 +270,13 @@ const MacroPlanningTab: React.FC = () => {
         </div>
       </div>
 
-      <div className={`overflow-x-auto -mx-2 px-2 pb-4 select-none ${movingBlock ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+      <div className={`overflow-x-auto -mx-2 px-2 pb-4 select-none scrollbar-thin scrollbar-thumb-nexus-gold/40 scrollbar-track-white/5 ${movingBlock ? 'cursor-grabbing' : 'cursor-crosshair'}`}
         onMouseLeave={handleLeave}
         onMouseUp={() => { if (movingBlock) { setMovingBlock(null); setDragStart(null); setDragCurrent(null); } }}>
         <div style={{ width: `${CELL*52+2}px` }}>
           <div className="flex mb-1">
             {monthGroups.map((mg,i) => (
-              <div key={i} style={{width:`${CELL*mg.count}px`}} className="text-[8px] uppercase font-bold border-l border-white/10 pl-1" style={{color:'#E8B800'}}>{mg.m.toUpperCase()}</div>
+              <div key={i} style={{width:`${CELL*mg.count}px`}} className="text-[9px] font-bold uppercase pl-2" style={{color:'#E8B800',borderLeft:'2px solid rgba(232,184,0,0.3)',paddingTop:'2px',paddingBottom:'2px'}}>{mg.m.toUpperCase()}</div>
             ))}
           </div>
           <div className="flex h-9">
@@ -284,7 +284,7 @@ const MacroPlanningTab: React.FC = () => {
               const inDrag = w.idx>=dragMin && w.idx<=dragMax;
               const isCurrent = w.idx===currentWeekNum;
               return (
-                <div key={w.idx} style={{width:`${CELL}px`}}
+                <div key={w.idx} style={{width:`${CELL}px`,height:'48px'}}
                   className={`border-r border-b border-white/5 flex flex-col items-center justify-center text-center transition-colors ${inDrag?'bg-nexus-gold/25':isCurrent?'bg-nexus-gold/10':'bg-white/2 hover:bg-white/6'}`}
                   onMouseDown={() => handleCellDown(w.idx)} onMouseEnter={() => handleCellEnter(w.idx)} onMouseUp={() => handleCellUp(w.idx)}>
                   <span className={`text-[7px] font-bold ${isCurrent?'text-nexus-gold':'text-nexus-gold/60'}`}>{w.label}</span>
