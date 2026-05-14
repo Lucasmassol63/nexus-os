@@ -70,16 +70,21 @@ const URINE_COLORS = [
 interface SliderProps {
   label: string;
   sublabel?: string;
+  rpeMode?: boolean;
   val: number;
   onChange: (v: number) => void;
   accentColor?: string;
   inverse?: boolean;
 }
 
-const Slider: React.FC<SliderProps> = ({ label, sublabel, val, onChange, accentColor = '#E52E01', inverse = false }) => {
+const Slider: React.FC<SliderProps & { rpeMode?: boolean }> = ({ label, sublabel, val, onChange, accentColor = '#E52E01', inverse = false, rpeMode = false }) => {
   const norm = inverse ? 10 - val : val;
-  const color = norm <= 3 ? '#EF4444' : norm <= 6 ? '#F59E0B' : '#10B981';
-  const verb  = norm <= 2 ? 'Critique' : norm <= 4 ? 'Faible' : norm <= 6 ? 'Moyen' : norm <= 8 ? 'Bon' : 'Excellent';
+  const color = rpeMode
+    ? (val <= 4 ? '#10B981' : val <= 6 ? '#F59E0B' : val <= 8 ? '#F97316' : '#EF4444')
+    : (norm <= 3 ? '#EF4444' : norm <= 6 ? '#F59E0B' : '#10B981');
+  const verb = rpeMode
+    ? (val <= 2 ? 'Très facile' : val <= 4 ? 'Facile' : val === 5 ? 'Moyen' : val <= 7 ? 'Difficile' : val <= 9 ? 'Très dur' : 'Maximal 🔥')
+    : (norm <= 2 ? 'Critique' : norm <= 4 ? 'Faible' : norm <= 6 ? 'Moyen' : norm <= 8 ? 'Bon' : 'Excellent');
 
   return (
     <div className="w-full">
@@ -259,7 +264,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({ athlete, onComplete })
 
                 {/* Slider RPE */}
                 <Slider
-                  label="Comment c'était ?"
+                  label="Comment c'était ?" rpeMode
                   sublabel="1 = Très facile · 10 = Effort maximal absolu"
                   val={rpe}
                   onChange={v => setRpeBySession(prev => ({ ...prev, [event.id]: v }))}
