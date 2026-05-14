@@ -349,7 +349,7 @@ export async function getStaffInbox(): Promise<StaffInboxItem[]> {
       if (log.comment   && log.comment.trim())         alerts.push(`"${log.comment}"`);
       if (alerts.length > 0) {
         items.push({
-          id: \`ci_\${log.id ?? log.athlete_id}_\${log.date}\`,
+          id: "ci_" + (log.id ?? log.athlete_id) + "_" + log.date,
           type: 'checkin_alert',
           athleteId: log.athlete_id ?? '',
           athleteName: log.athlete_name ?? log.athlete_id ?? 'Joueur',
