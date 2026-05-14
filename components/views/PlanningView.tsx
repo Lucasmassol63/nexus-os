@@ -279,7 +279,7 @@ const MacroPlanningTab: React.FC = () => {
               <div key={i} style={{width:`${CELL*mg.count}px`,flexShrink:0,fontSize:"13px",fontWeight:"bold",textTransform:"uppercase",color:"#E8B800",borderLeft:"2px solid rgba(232,184,0,0.35)",paddingLeft:"10px",display:"flex",alignItems:"center",height:"30px",background:"rgba(232,184,0,0.04)"}}>{mg.m.toUpperCase()}</div>
             ))}
           </div>
-          <div className="flex h-9">
+          <div style={{display:"flex"}}>
             {weeks.map(w => {
               const inDrag = w.idx>=dragMin && w.idx<=dragMax;
               const isCurrent = w.idx===currentWeekNum;
