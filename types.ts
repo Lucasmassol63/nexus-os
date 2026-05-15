@@ -5,7 +5,7 @@ export type UserRole = 'COACH' | 'ATHLETE';
 export interface Match {
   id: string;
   opponent: string;
-  date: string;
+  date: string; // ISO string
   time: string;
   isHome: boolean;
   location: string;
@@ -13,8 +13,8 @@ export interface Match {
 
 export interface RadarMetric {
   subject: string;
-  A: number;
-  B: number;
+  A: number; // Athlete
+  B: number; // Team Avg / Target
   fullMark: number;
 }
 
@@ -24,9 +24,9 @@ export interface MonitoringDay {
   date: string;
   rpe: number;
   attendance: AttendanceStatus;
-  duration?: number;
-  sessionType?: string;
-  load?: number;
+  duration?: number; // in minutes
+  sessionType?: string; // e.g., 'MATCH', 'TRAINING', 'RECOVERY'
+  load?: number; // RPE * duration
 }
 
 export interface TeamStats {
@@ -42,8 +42,8 @@ export interface GamificationProfile {
   nextLevelXp: number;
   streakDays: number;
   rank: string;
-  selectedSkin: string;
-  unlockedSkins: string[];
+  selectedSkin: string; // Emoji char
+  unlockedSkins: string[]; // List of emoji chars
   unlockedFeatures: string[];
 }
 
@@ -67,11 +67,20 @@ export interface Appointment {
   time: string;
   coachName: string;
   isBooked: boolean;
-  bookedBy?: string;
+  bookedBy?: string; // Athlete ID
   reason?: string;
-  status?: 'AVAILABLE' | 'PENDING_VALIDATION' | 'CONFIRMED' | 'DECLINED';
 }
 
+export interface FederationStats {
+  competition: 'N1' | 'U18';
+  matchesPlayed: number;
+  goals: number;
+  shotsOnGoal: number;
+  exclusions: number;
+  penalties: number;
+}
+
+// Nutrition Types
 export type FoodCategory = 'PROTEIN' | 'STARCH' | 'VEGETABLE' | 'OTHER';
 
 export interface FoodItem {
@@ -79,7 +88,7 @@ export interface FoodItem {
   name: string;
   category: FoodCategory;
   unit: 'g' | 'ml' | 'piece';
-  calories: number;
+  calories: number; // per 100g or per unit
   protein: number;
   carbs: number;
   fat: number;
@@ -87,7 +96,7 @@ export interface FoodItem {
 
 export interface MealLog {
   id: string;
-  date: string;
+  date: string; // ISO Date (YYYY-MM-DD)
   type: 'Petit Déjeuner' | 'Déjeuner' | 'Dîner' | 'Collation';
   foods: { item: FoodItem; quantity: number }[];
   totalCalories: number;
@@ -96,35 +105,33 @@ export interface MealLog {
   totalFat: number;
 }
 
-export type EventType =
-  | 'WATER-POLO' | 'MUSCU' | 'MATCH' | 'REST'
-  | 'KINE' | 'MENTAL' | 'VIDEO' | 'MEETING'
-  | 'ENTRETIEN' | 'SLOT_LIBRE';
+// Coach Planning Types
+export type EventType = 'WATER-POLO' | 'MUSCU' | 'MATCH' | 'REST' | 'KINE' | 'MENTAL' | 'VIDEO' | 'MEETING' | 'ENTRETIEN' | 'SLOT_LIBRE';
 
 export interface ScheduleEvent {
   id: string;
   type: EventType;
-  startTime: string;
-  endTime: string;
-  title: string;
-  description?: string;
-  intensity?: number;
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+  title: string;     // Theme or Title
+  description?: string; // Comment/Details
+  intensity?: number; // Predictive RPE
   isVisibleToAthletes: boolean;
 }
 
 export interface DaySchedule {
-  dayName: string;
-  date: string;
+  dayName: string; // LUN, MAR...
+  date: string; // ISO Date YYYY-MM-DD
   events: ScheduleEvent[];
 }
 
 export interface DailyLog {
   date: string;
-  sleep: number;
-  fatigue: number;
-  soreness: number;
-  foodQuality: number;
-  mood: number;
+  sleep: number; 
+  fatigue: number; 
+  soreness: number; 
+  foodQuality: number; 
+  mood: number; 
   comment: string;
 }
 
@@ -133,26 +140,31 @@ export interface Athlete {
   firstName: string;
   lastName: string;
   code: string;
-  age: number;
+  age: number; 
   type: 'TEAM' | 'PRIVATE';
-  team_category?: 'U18' | 'N1' | 'BOTH';
-  objectives: string;
-  structuredObjectives: StructuredObjectives;
+  objectives: string; 
+  structuredObjectives: StructuredObjectives; 
+  
+  // Gamification
   gamification: GamificationProfile;
+
+  // Game Stats
   stats: {
     goals: number;
     fouls: number;
     matchesPlayed: number;
     exclusions: number;
   };
+
+  // Monthly Follow-up
   monitoring: {
     waterRpe: number;
-    waterAttendance: number;
-    waterHistory: MonitoringDay[];
+    waterAttendance: number; 
+    waterHistory: MonitoringDay[]; 
     dryRpe: number;
-    dryAttendance: number;
-    dryHistory: MonitoringDay[];
-    weight: { date: string; value: number }[];
+    dryAttendance: number; 
+    dryHistory: MonitoringDay[]; 
+    weight: { date: string, value: number }[]; 
     height: number;
     measurements: {
       chest: number;
@@ -161,14 +173,20 @@ export interface Athlete {
       arms: number;
     };
   };
+
   nutritionHistory: MealLog[];
-  lastCheckIn?: DailyLog;
-  dailyLogs?: DailyLog[];
+  lastCheckIn?: DailyLog; // Added for alert system
+  dailyLogs?: DailyLog[]; // History of check-ins
+
+  // Radar Data
   performance: {
     flexibility: RadarMetric[];
     dry: RadarMetric[];
     water: RadarMetric[];
   };
+
+  // Federation Stats (scraped from FFN)
+  federationStats?: FederationStats[];
 }
 
 export interface Exercise {
@@ -176,7 +194,7 @@ export interface Exercise {
   name: string;
   sets: number;
   reps: string;
-  tempo: string;
+  tempo: string; 
   rest: string;
   targetLoad: string;
   instructions?: string;
@@ -188,7 +206,7 @@ export interface WorkoutSession {
   date: string;
   title: string;
   type: 'MUSCU' | 'WATER-POLO';
-  contentJson: string;
+  contentJson: string; 
   completed: boolean;
   actualRpe?: number;
 }
